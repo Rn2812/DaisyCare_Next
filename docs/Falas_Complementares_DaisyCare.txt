@@ -1,0 +1,660 @@
+DAISYCARE · FALAS COMPLEMENTARES · v40.50
+=========================================================================
+
+OBJETIVO
+  Roteiro para gravar as falas que complementam a biblioteca atual de áudios.
+  Cada fala tem ID/arquivo, momento em que toca, regra de negócio ligada
+  (RN-xx, ver o catálogo na página "Regras de negócios") e o texto exato.
+
+COMO USAR
+  1. Crie a pasta  falas  ao lado do arquivo DaisyCare_App_v40_50_*.html.
+  2. Gere cada áudio com a voz principal e salve como  falas/<arquivo>.mp3
+     (ou .wav), com o nome EXATO da coluna "ARQUIVO".
+  3. Abra pelo Iniciar_DaisyCare.bat e ative a voz. Sem o arquivo, o app usa o
+     clipe curto de antes (ou fica sem áudio, nos casos novos).
+  4. Marcação "LIGADA": o app já toca o arquivo quando ele existir.
+     Sem marcação: a fala está pronta no roteiro; peça a ligação na próxima
+     versão (o texto e o nome do arquivo não mudam).
+
+PEDIDO PARA O GERADOR DE VOZ (copie e cole antes de cada texto)
+  "Leia exatamente este texto, em português do Brasil, com voz feminina
+   acolhedora e natural, ritmo calmo, sem acrescentar nem remover palavras:"
+
+REGRAS DE ESCRITA DAS FALAS
+  - Frases curtas: de 10 a 25 palavras (até uns 8 segundos).
+  - Tom acolhedor, direto e sem jargão. Use o nome da paciente só quando soar natural.
+  - Nunca prometa resultado clínico, nunca interprete exame e nunca oriente remédio.
+  - Não diga CPF, e-mail nem telefone em voz alta. O dado fica só na tela.
+  - Números e datas: escreva como se fala ("26 de outubro, às 21 horas").
+  - Toda fala nova entra neste roteiro com ID antes de virar áudio (RN-30).
+
+REGRAS DE NEGÓCIO MAIS USADAS NAS FALAS
+  RN-19  Atraso médico: >10 min avisa a recepção; >15 min a Daisy avisa pacientes; >30 min aciona cobertura.
+  RN-20  Incidente no percurso: segurança da pessoa primeiro; cobertura em paralelo; informação restrita à central.
+  RN-21  Emergência pessoal: sem justificativa detalhada; agenda coberta.
+  RN-22  Substituto: mesma especialidade, escala, distância, carga e unidade.
+  RN-23  Convite ao substituto: 5 minutos; no máximo 3 convites; depois, plano B.
+  RN-24  Plano B: teleconsulta ou remarcação priorizada por urgência clínica.
+  RN-25  Aviso ao paciente: mensagem padronizada, sem expor motivo pessoal do médico.
+  RN-26  Atraso acumulado >20 min: reorganiza a agenda e avisa a fila.
+  RN-06  Pix/boleto só depois de validar nome completo e CPF.
+  RN-14  Emergência clínica: orientar pronto atendimento ou 192, sem diagnosticar.
+
+
+
+=========================================================================
+A · ABERTURA E MENU
+=========================================================================
+
+[01] ARQUIVO: falas/menu_inicial_completa.mp3   (LIGADA)
+     QUANDO:  Abertura do chat ou comando MENU
+     REGRA:   RN-10
+     TEXTO:   Olá, eu sou a Daisy. Posso ajudar com sua consulta, fila, agenda,
+              família, pagamentos e dicas. Escolha um número de 1 a 11, ou fale
+              comigo naturalmente.
+
+
+[02] ARQUIVO: falas/boas_vindas_retorno.mp3
+     QUANDO:  Paciente que já usou o canal
+     REGRA:   RN-10
+     TEXTO:   Que bom ver você de novo, Patricia! Como posso ajudar hoje?
+
+
+[03] ARQUIVO: falas/hello.mp3
+     QUANDO:  Saudação (oi, bom dia, boa tarde)
+     REGRA:   RN-10
+     TEXTO:   Olá, Patricia! Como posso ajudar hoje?
+
+
+[04] ARQUIVO: falas/bom_dia.mp3
+     QUANDO:  Saudação pela manhã
+     REGRA:   RN-10
+     TEXTO:   Bom dia, Patricia! Espero que seu dia comece leve. Em que posso
+              ajudar?
+
+
+[05] ARQUIVO: falas/boa_noite.mp3
+     QUANDO:  Saudação à noite
+     REGRA:   RN-10
+     TEXTO:   Boa noite, Patricia! Estou aqui para ajudar no que precisar.
+
+
+[06] ARQUIVO: falas/conhecer_daisy.mp3   (LIGADA)
+     QUANDO:  Opção 10
+     REGRA:   RN-10
+     TEXTO:   Eu sou a Daisy, a assistente virtual do Mater Dei. Ajudo com agenda,
+              fila, chegada e dicas. Não faço diagnósticos nem oriento
+              medicamentos, isso é com a equipe de saúde.
+
+
+[07] ARQUIVO: falas/go_menu.mp3
+     QUANDO:  Usuário diz MENU ou SAIR
+     REGRA:   RN-10
+     TEXTO:   Tudo bem, vamos voltar ao início. Como posso ajudar?
+
+
+[08] ARQUIVO: falas/repeat.mp3
+     QUANDO:  Não entendi / repetir
+     REGRA:   RN-09
+     TEXTO:   Claro! Vou explicar de outro jeito.
+
+
+[09] ARQUIVO: falas/thanks.mp3
+     QUANDO:  Agradecimento
+     REGRA:   RN-09
+     TEXTO:   De nada! Fico feliz em ajudar.
+
+
+[10] ARQUIVO: falas/bye.mp3
+     QUANDO:  Despedida
+     REGRA:   RN-10
+     TEXTO:   Até logo, Patricia! Cuide-se.
+
+
+
+=========================================================================
+B · CONSULTA, AGENDA E FILA (opções 1 a 4)
+=========================================================================
+
+[11] ARQUIVO: falas/confirmacao_consulta_completa.mp3   (LIGADA)
+     QUANDO:  Opção 1 · consulta confirmada
+     REGRA:   RN-01
+     TEXTO:   Sua consulta está confirmada, com o cardiologista, dia 26/10 às
+              21:00, na Unidade Paulista. Qualquer dúvida, estou por aqui!
+
+
+[12] ARQUIVO: falas/confirmacao_ja_confirmada.mp3   (LIGADA)
+     QUANDO:  Paciente tenta confirmar de novo
+     REGRA:   RN-01
+     TEXTO:   Sua consulta já estava confirmada. Está tudo certo, Patricia!
+
+
+[13] ARQUIVO: falas/confirmacao_nao_encontrada.mp3
+     QUANDO:  Consulta não localizada
+     REGRA:   RN-01
+     TEXTO:   Não encontrei uma consulta para confirmar agora. Posso verificar sua
+              agenda completa?
+
+
+[14] ARQUIVO: falas/agenda_verificando.mp3
+     QUANDO:  Antes de listar a agenda
+     REGRA:   RN-03
+     TEXTO:   Vou verificar sua agenda. Só um minuto!
+
+
+[15] ARQUIVO: falas/agenda_completa.mp3   (LIGADA)
+     QUANDO:  Opção 3 · agenda completa
+     REGRA:   RN-03
+     TEXTO:   Sua próxima consulta é com o cardiologista, dia 26 de outubro, às 21
+              horas, na Unidade Paulista. Depois dela, você tem exames agendados.
+              Se quiser os detalhes de algum, é só pedir.
+
+
+[16] ARQUIVO: falas/agenda_vazia.mp3
+     QUANDO:  Sem itens futuros
+     REGRA:   RN-03
+     TEXTO:   Você não tem consultas futuras agendadas. Quer marcar uma nova?
+
+
+[17] ARQUIVO: falas/fila_posicao.mp3   (LIGADA)
+     QUANDO:  Opção 2 · posição na fila
+     REGRA:   RN-02
+     TEXTO:   Você está na fila digital. Vou acompanhar sua posição e aviso quando
+              for a sua vez. Pode ficar tranquila!
+
+
+[18] ARQUIVO: falas/fila_proximo.mp3
+     QUANDO:  Faltam poucos pacientes
+     REGRA:   RN-02
+     TEXTO:   Patricia, você é a próxima! Pode se encaminhar para a recepção.
+
+
+[19] ARQUIVO: falas/fila_indisponivel.mp3
+     QUANDO:  Fila fora do ar
+     REGRA:   RN-02
+     TEXTO:   Não consegui acessar a fila agora. Vou tentar de novo em instantes,
+              e a recepção pode ajudar se preferir.
+
+
+[20] ARQUIVO: falas/nova_consulta_completa.mp3   (LIGADA)
+     QUANDO:  Opção 4 · pede a especialidade
+     REGRA:   RN-04
+     TEXTO:   Claro! Para qual especialidade você quer marcar a consulta?
+
+
+[21] ARQUIVO: falas/nova_consulta_horarios.mp3
+     QUANDO:  Oferece horários
+     REGRA:   RN-04
+     TEXTO:   Encontrei estes horários disponíveis. Qual deles fica melhor para
+              você?
+
+
+[22] ARQUIVO: falas/nova_consulta_confirmada.mp3
+     QUANDO:  Nova consulta marcada
+     REGRA:   RN-04
+     TEXTO:   Pronto! Sua consulta foi marcada. Vou te lembrar um dia antes.
+
+
+[23] ARQUIVO: falas/nova_consulta_sem_horario.mp3   (LIGADA)
+     QUANDO:  Sem horário
+     REGRA:   RN-04
+     TEXTO:   Não há horários livres agora, mas posso colocar você na fila de
+              encaixe. Quer que eu faça isso?
+
+
+
+=========================================================================
+C · FAMÍLIA (opção 5)
+=========================================================================
+
+[24] ARQUIVO: falas/familia_pedir_codigo.mp3
+     QUANDO:  Pede o código familiar
+     REGRA:   RN-05
+     TEXTO:   Para ver a agenda da família, me diga o código familiar e o CPF do
+              responsável.
+
+
+[25] ARQUIVO: falas/agenda_familiar_completa.mp3   (LIGADA)
+     QUANDO:  Código aceito
+     REGRA:   RN-05
+     TEXTO:   Código familiar confirmado. Aqui estão as próximas consultas da sua
+              família.
+
+
+[26] ARQUIVO: falas/familia_codigo_invalido.mp3
+     QUANDO:  Código ou CPF não conferem
+     REGRA:   RN-05
+     TEXTO:   Os dados informados não conferem. Por segurança, confira e tente
+              novamente.
+
+
+[27] ARQUIVO: falas/familia_proxima_consulta.mp3
+     QUANDO:  Resumo da próxima consulta familiar
+     REGRA:   RN-05
+     TEXTO:   A próxima consulta da família é em novembro. Posso te lembrar no dia
+              anterior.
+
+
+
+=========================================================================
+D · PIX, BOLETO E LGPD (opção 6)
+=========================================================================
+
+[28] ARQUIVO: falas/pedir_identidade_completa.mp3   (LIGADA)
+     QUANDO:  Pede nome e CPF
+     REGRA:   RN-06
+     TEXTO:   Para continuar, informe seu nome completo e o CPF. Uso essas
+              informações só para confirmar sua identidade.
+
+
+[29] ARQUIVO: falas/lgpd_consent.mp3
+     QUANDO:  Pede consentimento
+     REGRA:   RN-15
+     TEXTO:   Para sua segurança, posso usar seu nome e data de nascimento só para
+              confirmar sua identidade?
+
+
+[30] ARQUIVO: falas/lgpd_ok.mp3
+     QUANDO:  Identidade confirmada
+     REGRA:   RN-15
+     TEXTO:   Identidade confirmada. Obrigada, Patricia.
+
+
+[31] ARQUIVO: falas/financeiro_nome_nao_confere.mp3
+     QUANDO:  Nome não confere
+     REGRA:   RN-06
+     TEXTO:   O nome informado não confere com o cadastro. Vamos tentar mais uma
+              vez?
+
+
+[32] ARQUIVO: falas/pix_gerado_completa.mp3   (LIGADA)
+     QUANDO:  Pix gerado
+     REGRA:   RN-06
+     TEXTO:   Pronto! Seu Pix foi gerado. Confira os dados e, se preferir, posso
+              enviar para o seu e-mail ou telefone cadastrado.
+
+
+[33] ARQUIVO: falas/boleto_emitido_completa.mp3   (LIGADA)
+     QUANDO:  Boleto emitido
+     REGRA:   RN-06
+     TEXTO:   Pronto! Seu boleto foi emitido. Se preferir, posso enviar para o seu
+              e-mail ou telefone cadastrado.
+
+
+[34] ARQUIVO: falas/pay_delivery.mp3
+     QUANDO:  Pergunta como receber
+     REGRA:   RN-06
+     TEXTO:   Como prefere receber? Por e-mail, WhatsApp, aqui no chat ou em
+              arquivo.
+
+
+[35] ARQUIVO: falas/pay_sent_email.mp3
+     QUANDO:  Enviado por e-mail
+     REGRA:   RN-06
+     TEXTO:   Enviei para o seu e-mail cadastrado.
+
+
+[36] ARQUIVO: falas/pay_sent_phone.mp3
+     QUANDO:  Enviado por telefone
+     REGRA:   RN-06
+     TEXTO:   Enviei para o seu telefone cadastrado.
+
+
+[37] ARQUIVO: falas/pay_file_ready.mp3
+     QUANDO:  Arquivo pronto
+     REGRA:   RN-06
+     TEXTO:   Seu arquivo está pronto para baixar.
+
+
+[38] ARQUIVO: falas/pay_cancelamento.mp3
+     QUANDO:  Pedido de cancelamento
+     REGRA:   RN-06
+     TEXTO:   Registrei sua solicitação de cancelamento. A equipe financeira
+              retorna em até um dia útil.
+
+
+
+=========================================================================
+E · CHEGADA, ROTA E DICAS (opção 7)
+=========================================================================
+
+[39] ARQUIVO: falas/cheguei_cedo_completa.mp3   (LIGADA)
+     QUANDO:  Opção 7 · chegou cedo
+     REGRA:   RN-07
+     TEXTO:   Que bom que você chegou cedo, Patricia! Enquanto espera, posso
+              sugerir um café no primeiro andar ou a brinquedoteca para as
+              crianças. Quer receber algumas dicas?
+
+
+[40] ARQUIVO: falas/dicas_recusadas.mp3
+     QUANDO:  Recusa as dicas
+     REGRA:   RN-07
+     TEXTO:   Sem problema. Continuo acompanhando sua fila e aviso quando for a
+              sua vez.
+
+
+[41] ARQUIVO: falas/route_menu.mp3
+     QUANDO:  Pede simulação de rota
+     REGRA:   RN-13
+     TEXTO:   Vamos simular sua rota. Escolha um cenário: trânsito normal, horário
+              de pico, chuva forte ou mobilidade reduzida.
+
+
+[42] ARQUIVO: falas/route_result.mp3
+     QUANDO:  Resultado da rota
+     REGRA:   RN-13
+     TEXTO:   Pronto! Comparei os meios de transporte e destaquei o melhor para o
+              seu cenário.
+
+
+[43] ARQUIVO: falas/route_leave_now.mp3
+     QUANDO:  Hora de sair de casa
+     REGRA:   RN-13
+     TEXTO:   Patricia, está na hora de sair. Assim você chega com tranquilidade.
+
+
+[44] ARQUIVO: falas/route_mobility.mp3   (LIGADA)
+     QUANDO:  Mobilidade reduzida ou criança
+     REGRA:   RN-13
+     TEXTO:   Peça apoio na recepção quando chegar. Estamos prontos para receber
+              você.
+
+
+[45] ARQUIVO: falas/late.mp3
+     QUANDO:  Paciente vai se atrasar
+     REGRA:   RN-13
+     TEXTO:   Sem problema. Avise a recepção ao chegar, e a equipe vai ajudar
+              você.
+
+
+[46] ARQUIVO: falas/cancel_slot.mp3
+     QUANDO:  Paciente não vai conseguir ir
+     REGRA:   RN-27
+     TEXTO:   Obrigada por avisar. Assim posso liberar a vaga para outro paciente.
+
+
+
+=========================================================================
+F · PREPARO DE EXAMES E PROCEDIMENTOS
+=========================================================================
+
+[47] ARQUIVO: falas/prep_menu.mp3
+     QUANDO:  Abre o preparo
+     REGRA:   RN-12
+     TEXTO:   Posso orientar o preparo do seu exame. Escolha uma categoria.
+
+
+[48] ARQUIVO: falas/prep_item.mp3
+     QUANDO:  Mostra a orientação
+     REGRA:   RN-12
+     TEXTO:   Aqui está a orientação de preparo. Se o seu pedido tiver outra
+              instrução, siga o pedido.
+
+
+[49] ARQUIVO: falas/prep_invalid.mp3
+     QUANDO:  Opção inválida
+     REGRA:   RN-12
+     TEXTO:   Não encontrei essa opção. Escolha um número da lista, por favor.
+
+
+[50] ARQUIVO: falas/prep_jejum.mp3   (LIGADA)
+     QUANDO:  Exame com jejum
+     REGRA:   RN-12
+     TEXTO:   Este exame pede jejum. Siga o tempo indicado no seu pedido e, se
+              tiver dúvida, fale com a equipe.
+
+
+[51] ARQUIVO: falas/proc_agendados.mp3
+     QUANDO:  Lista procedimentos
+     REGRA:   RN-12
+     TEXTO:   Estes são os procedimentos agendados para você.
+
+
+[52] ARQUIVO: falas/exam_not_found.mp3
+     QUANDO:  Exame não encontrado
+     REGRA:   RN-12
+     TEXTO:   Não encontrei esse exame no seu cadastro. Quer que eu chame a equipe
+              para ajudar?
+
+
+
+=========================================================================
+G · AVALIAÇÃO (opção 8)
+=========================================================================
+
+[53] ARQUIVO: falas/nps_pedir_nota_completa.mp3   (LIGADA)
+     QUANDO:  Pede a nota
+     REGRA:   RN-08
+     TEXTO:   Sua opinião é muito importante. De zero a dez, que nota você dá ao
+              atendimento de hoje?
+
+
+[54] ARQUIVO: falas/nps_obrigada.mp3
+     QUANDO:  Nota registrada
+     REGRA:   RN-08
+     TEXTO:   Obrigada pela sua avaliação! Ela ajuda a gente a melhorar.
+
+
+[55] ARQUIVO: falas/nps_invalida.mp3
+     QUANDO:  Nota inválida
+     REGRA:   RN-08
+     TEXTO:   Essa nota não vale. Escolha um número de zero a dez, por favor.
+
+
+[56] ARQUIVO: falas/nps_detrator.mp3   (LIGADA)
+     QUANDO:  Nota baixa (0 a 6)
+     REGRA:   RN-08
+     TEXTO:   Sinto muito que a experiência não tenha sido boa. Quer contar o que
+              aconteceu? Posso encaminhar para a equipe.
+
+
+
+=========================================================================
+H · DÚVIDAS, SEGURANÇA E ERROS (opções 9 e 11)
+=========================================================================
+
+[57] ARQUIVO: falas/duvidas_completa.mp3   (LIGADA)
+     QUANDO:  Opção 9
+     REGRA:   RN-09
+     TEXTO:   Pode perguntar! Posso explicar sobre sua consulta, o hospital e o
+              preparo de exames.
+
+
+[58] ARQUIVO: falas/atendente_humano_completa.mp3   (LIGADA)
+     QUANDO:  Opção 11
+     REGRA:   RN-11
+     TEXTO:   Vou chamar um atendente humano para continuar com você. Só um
+              instante, por favor.
+
+
+[59] ARQUIVO: falas/fora_escopo.mp3
+     QUANDO:  Pergunta clínica
+     REGRA:   RN-09
+     TEXTO:   Essa pergunta é da equipe de saúde. Posso chamar um atendente para
+              te ajudar com isso.
+
+
+[60] ARQUIVO: falas/medicamento_seguranca.mp3
+     QUANDO:  Pergunta sobre medicamento
+     REGRA:   RN-09
+     TEXTO:   Não posso orientar alteração ou suspensão de medicamentos. Fale com
+              seu médico ou com a equipe assistencial.
+
+
+[61] ARQUIVO: falas/emergencia.mp3   (LIGADA)
+     QUANDO:  Sinais de urgência
+     REGRA:   RN-14
+     TEXTO:   Isso pode ser urgente. Procure imediatamente o pronto atendimento
+              mais próximo ou ligue 192.
+
+
+[62] ARQUIVO: falas/nao_entendi.mp3
+     QUANDO:  Não entendeu o pedido
+     REGRA:   RN-09
+     TEXTO:   Não consegui entender. Você pode repetir de outro jeito ou digitar
+              um número de 1 a 11?
+
+
+[63] ARQUIVO: falas/servico_indisponivel.mp3
+     QUANDO:  Sistema indisponível
+     REGRA:   RN-29
+     TEXTO:   Não consegui acessar essa informação agora. Tente de novo em
+              instantes ou fale com um atendente.
+
+
+
+=========================================================================
+I · MÉDICOS, TRÂNSITO E COBERTURA DE AGENDA (para o paciente)
+=========================================================================
+
+[64] ARQUIVO: falas/medico_atraso_transito.mp3   (LIGADA (simulador))
+     QUANDO:  Atraso do médico por trânsito (>15 min)
+     REGRA:   RN-19
+     TEXTO:   Olá! Seu médico está com um pequeno atraso no trânsito. Aviso você
+              assim que ele chegar. Se preferir, posso sugerir um café enquanto
+              isso.
+
+
+[65] ARQUIVO: falas/doctor_delay.mp3
+     QUANDO:  Atraso genérico
+     REGRA:   RN-19
+     TEXTO:   A equipe médica está com um pequeno atraso. Aviso você assim que
+              houver novidade.
+
+
+[66] ARQUIVO: falas/medico_cobertura_confirmada.mp3   (LIGADA (simulador))
+     QUANDO:  Cobertura confirmada
+     REGRA:   RN-25
+     TEXTO:   Olá! Seu atendimento será com outro profissional da mesma
+              especialidade, no mesmo horário. Qualquer dúvida, estou por aqui!
+
+
+[67] ARQUIVO: falas/medico_cobertura_opcoes.mp3
+     QUANDO:  Plano B: sem cobertura
+     REGRA:   RN-24
+     TEXTO:   Houve um imprevisto com o horário do seu atendimento. Posso oferecer
+              uma teleconsulta ainda hoje ou remarcar com prioridade. O que
+              prefere?
+
+
+[68] ARQUIVO: falas/medico_remarcacao_ok.mp3
+     QUANDO:  Remarcação priorizada
+     REGRA:   RN-24
+     TEXTO:   Pronto! Sua consulta foi remarcada com prioridade. Vou te lembrar um
+              dia antes.
+
+
+[69] ARQUIVO: falas/medico_atraso_agenda.mp3
+     QUANDO:  Atraso acumulado na agenda (>20 min)
+     REGRA:   RN-26
+     TEXTO:   A agenda está um pouco atrasada hoje. Vou te avisar assim que a sua
+              vez estiver próxima.
+
+
+
+=========================================================================
+J · MÉDICOS E CENTRAL (falas internas, voz para a equipe)
+=========================================================================
+
+[70] ARQUIVO: falas/medico_incidente_percurso.mp3   (LIGADA (simulador))
+     QUANDO:  Alerta de incidente no percurso
+     REGRA:   RN-20
+     TEXTO:   Atenção, central. Possível incidente no percurso de um profissional.
+              Priorize o contato e a segurança. A cobertura da agenda foi
+              iniciada.
+
+
+[71] ARQUIVO: falas/central_cobertura_convite.mp3
+     QUANDO:  Convite ao substituto
+     REGRA:   RN-23
+     TEXTO:   Você foi convidado para cobrir uma agenda. Você tem cinco minutos
+              para aceitar.
+
+
+[72] ARQUIVO: falas/central_cobertura_aceita.mp3
+     QUANDO:  Substituto aceitou
+     REGRA:   RN-23
+     TEXTO:   Cobertura confirmada. A agenda foi reatribuída e os pacientes serão
+              avisados.
+
+
+[73] ARQUIVO: falas/central_sem_candidato.mp3
+     QUANDO:  Nenhum candidato
+     REGRA:   RN-24
+     TEXTO:   Nenhum profissional disponível. Acione o plano de telemedicina e
+              remarcação prioritária.
+
+
+[74] ARQUIVO: falas/central_emergencia_pessoal.mp3
+     QUANDO:  Emergência pessoal informada
+     REGRA:   RN-21
+     TEXTO:   Emergência pessoal registrada. A agenda será coberta. Cuide-se, e
+              avise quando puder.
+
+
+
+=========================================================================
+K · SMART QUEUE (encaixe de última hora)
+=========================================================================
+
+[75] ARQUIVO: falas/sq_slot_open.mp3   (LIGADA)
+     QUANDO:  Vaga liberada · convite
+     REGRA:   RN-27
+     TEXTO:   Patricia, surgiu uma vaga hoje. Você consegue chegar a tempo?
+
+
+[76] ARQUIVO: falas/sq_accept.mp3
+     QUANDO:  Aceitou o encaixe
+     REGRA:   RN-27
+     TEXTO:   Encaixe confirmado! Vou acompanhar sua chegada.
+
+
+[77] ARQUIVO: falas/sq_decline.mp3
+     QUANDO:  Recusou o encaixe
+     REGRA:   RN-27
+     TEXTO:   Tudo bem. Você continua na fila e eu aviso se surgir outra vaga.
+
+
+[78] ARQUIVO: falas/sq_no_slot.mp3
+     QUANDO:  Sem vaga
+     REGRA:   RN-27
+     TEXTO:   Ainda não há vaga, mas você segue na fila de encaixe.
+
+
+
+=========================================================================
+L · ESPAÇO KIDS
+=========================================================================
+
+[79] ARQUIVO: falas/kids_welcome.mp3
+     QUANDO:  Abre o Espaço Kids
+     REGRA:   RN-17
+     TEXTO:   Bem-vindos ao Espaço Kids! Aqui a gente brinca e aprende.
+
+
+[80] ARQUIVO: falas/kids_star.mp3
+     QUANDO:  Ganhou estrela
+     REGRA:   RN-17
+     TEXTO:   Parabéns! Você ganhou uma estrela.
+
+
+[81] ARQUIVO: falas/kids_brave.mp3
+     QUANDO:  Fim da história
+     REGRA:   RN-17
+     TEXTO:   A Daisy foi muito corajosa, e você também!
+
+
+[82] ARQUIVO: falas/kids_paint_done.mp3
+     QUANDO:  Terminou o desenho
+     REGRA:   RN-17
+     TEXTO:   Que desenho lindo! Quer pintar outro?
+
+
+[83] ARQUIVO: falas/kids_game_over.mp3
+     QUANDO:  Fim de jogo
+     REGRA:   RN-17
+     TEXTO:   Muito bem! Quer jogar de novo?
+
+
+
+TOTAL: 83 falas.

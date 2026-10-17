@@ -1,0 +1,220 @@
+{
+  "name": "16 · Indicadores de sucesso e receita recuperada",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "186693d2-08e4-5396-b1ab-37ff674ef4fa",
+      "name": "A cada hora",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "\nSELECT\n  count(*) FILTER (WHERE evento IN ('no_show','consulta_cancelada','consulta_remarcada'))            AS faltas_total,\n  count(*) FILTER (WHERE evento = 'consulta_remarcada')                                              AS remarcadas,\n  count(*) FILTER (WHERE evento = 'vaga_liberada')                                                   AS vagas_liberadas,\n  count(*) FILTER (WHERE evento = 'encaixe_confirmado')                                              AS encaixes,\n  coalesce(avg((payload->>'tempo_cobertura_min')::numeric) FILTER (WHERE evento = 'cobertura_resolvida'), 0) AS tempo_cobertura_min\nFROM audit.evento_integracao WHERE criado_em::date = current_date",
+        "options": {}
+      },
+      "id": "9f7e9563-ee00-5d59-942d-00be618ae382",
+      "name": "Eventos do dia",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst TICKET = Number($env.TICKET_MEDIO || 180);                       // estimativa, ajustar com o financeiro\nconst pct = (a, b) => b ? Math.round(1000 * a / b) / 10 : 0;\nconst kpi = {\n  reversao_faltas_pct: pct(r.remarcadas, r.faltas_total),              // remarcados ÷ (no-show + cancelados + remarcados)\n  reversao_vagas_pct: pct(r.encaixes, r.vagas_liberadas),              // encaixe_confirmado ÷ vaga_liberada\n  receita_recuperada_estimada: (Number(r.remarcadas) + Number(r.encaixes)) * TICKET,\n  tempo_cobertura_min: Math.round(r.tempo_cobertura_min * 10) / 10,\n  gerado_em: new Date().toISOString(), correlation_id: 'KPI-' + Date.now().toString(36)\n};\nkpi.abaixo_da_meta = kpi.reversao_faltas_pct < 40 || kpi.reversao_vagas_pct < 50;   // metas sugeridas\nreturn [{ json: kpi }];"
+      },
+      "id": "48feff8b-66b3-51c0-be2b-b35c7007f303",
+      "name": "Calcular indicadores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-powerbi-push",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ rows: [$json] }) }}",
+        "options": {}
+      },
+      "id": "241e0b41-833b-54d0-a86a-8c08599c5ec0",
+      "name": "Enviar ao Power BI (dataset)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.abaixo_da_meta }}",
+              "operation": "equal",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "id": "04f3a04f-ad49-53a5-9310-34f40cef92d7",
+      "name": "Abaixo da meta?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        720,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-aviso-central",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ correlation_id: $json.correlation_id, tipo: \"kpi_abaixo_da_meta\", reversao_faltas_pct: $json.reversao_faltas_pct, reversao_vagas_pct: $json.reversao_vagas_pct }) }}",
+        "options": {}
+      },
+      "id": "bb5ccad6-ca91-5b03-80e0-9371e5720388",
+      "name": "Alertar gestão",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO audit.evento_integracao (correlation_id, workflow, evento, payload) VALUES ($1,$2,$3,$4::jsonb)",
+        "options": {
+          "queryReplacement": "={{ [$json.correlation_id, '16_indicadores_sucesso', 'indicadores_calculados', JSON.stringify($json)] }}"
+        }
+      },
+      "id": "d37029ce-62dd-52da-bca7-87c15fff9143",
+      "name": "Gravar evento",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        960,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Receita recuperada é uma ESTIMATIVA (remarcados + encaixes × ticket médio). Metas de 40% e 50% são sugestões do MVP.",
+        "height": 140,
+        "width": 360
+      },
+      "id": "46f3f417-88db-5a05-a7d2-dd767ed7222b",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        480,
+        -200
+      ]
+    }
+  ],
+  "connections": {
+    "A cada hora": {
+      "main": [
+        [
+          {
+            "node": "Eventos do dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eventos do dia": {
+      "main": [
+        [
+          {
+            "node": "Calcular indicadores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular indicadores": {
+      "main": [
+        [
+          {
+            "node": "Enviar ao Power BI (dataset)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Abaixo da meta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Abaixo da meta?": {
+      "main": [
+        [
+          {
+            "node": "Alertar gestão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar ao Power BI (dataset)": {
+      "main": [
+        [
+          {
+            "node": "Gravar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "DaisyCare"
+    },
+    {
+      "name": "modelo-ouro"
+    }
+  ],
+  "meta": {
+    "descricao": "Consolida reversão de faltas, reversão de vagas e receita recuperada (estimativa) e envia ao Power BI com alerta quando abaixo da meta.",
+    "aviso": "Simulação do MVP. Vincule suas credenciais (PostgreSQL) e defina a variável N8N_BASE_URL. Sem CPF nem dados clínicos."
+  }
+}

@@ -1,0 +1,383 @@
+{
+  "name": "14 · Cobertura de agenda (ranking, convite e reatribuição)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "daisy-cobertura",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "c529991a-b399-5de7-9276-b3632799726b",
+      "name": "Gatilho de cobertura",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "83bc4bc3-b63d-5068-962f-ce878eb07f6c"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT medico_id, eta_min, carga_pacientes, unidade FROM ops.escala WHERE status = 'sobreaviso' AND especialidade = $1",
+        "options": {
+          "queryReplacement": "={{ [$json.body.especialidade] }}"
+        }
+      },
+      "id": "92172cc8-cd7c-5c04-aa1b-fdb895b33cde",
+      "name": "Candidatos em sobreaviso",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const g = $('Gatilho de cobertura').first().json.body;\nconst r = $input.all().map(i => i.json).map(c => ({\n  ...c, score: Math.round(100 - c.eta_min * 1.2 - (c.carga_pacientes / 2) * 3 + (c.unidade === g.unidade ? 15 : 0))\n})).sort((a, b) => b.score - a.score);\nconst top = r[0] || null;\nreturn [{ json: { ...g, candidato: top, ranking: r.slice(0, 3), tem_candidato: !!top } }];"
+      },
+      "id": "8a32331e-854c-5297-8e0e-95608bcaa775",
+      "name": "Ranking de cobertura",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.tem_candidato }}",
+              "operation": "equal",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "id": "499db8c2-20b1-5a09-8c7a-036fb02eedf8",
+      "name": "Há candidato?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-convite-medico",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ correlation_id: $json.correlation_id, medico_id: $json.candidato.medico_id, janela_min: 5 }) }}",
+        "options": {}
+      },
+      "id": "975da921-9f15-5b40-8074-0aca5faf650e",
+      "name": "Convidar profissional (app + WhatsApp)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        -90
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 5,
+        "unit": "minutes"
+      },
+      "id": "d8c5745a-e9da-581c-b390-a7237bee8fdc",
+      "name": "Aguardar 5 min",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        -90
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT aceitou FROM ops.convite_cobertura WHERE correlation_id = $1 ORDER BY criado_em DESC LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ [$('Ranking de cobertura').first().json.correlation_id] }}"
+        }
+      },
+      "id": "e0a482ec-ae5e-568b-89ad-5d70220705c5",
+      "name": "Resposta do convite",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1440,
+        -90
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.aceitou }}",
+              "operation": "equal",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "id": "2161f2bc-2655-599c-ac2e-44d844d50b67",
+      "name": "Aceitou?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        -90
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-agenda-reatribuir",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ correlation_id: $(\"Ranking de cobertura\").first().json.correlation_id, de: $(\"Ranking de cobertura\").first().json.medico_id, para: $(\"Ranking de cobertura\").first().json.candidato.medico_id }) }}",
+        "options": {}
+      },
+      "id": "fbe73df6-ce71-57ae-b659-7f44223be223",
+      "name": "Reatribuir agenda (11)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        -170
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-agente-aviso",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ correlation_id: $(\"Ranking de cobertura\").first().json.correlation_id, tipo: \"cobertura_confirmada\", canais: [\"app\",\"whatsapp\"] }) }}",
+        "options": {}
+      },
+      "id": "09d67d4d-3e23-5827-b0f7-4ddf2511a484",
+      "name": "Daisy avisa os pacientes (10)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2160,
+        -170
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-smartqueue-remarcar",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ correlation_id: $(\"Ranking de cobertura\").first().json.correlation_id, criterio: \"prioridade_assistencial\", alternativa: \"telemedicina\" }) }}",
+        "options": {}
+      },
+      "id": "031c67b5-34a9-5c63-827a-d2103b7c275a",
+      "name": "Telemedicina ou remarcação por prioridade (03)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO audit.evento_integracao (correlation_id, workflow, evento, payload) VALUES ($1,$2,$3,$4::jsonb)",
+        "options": {
+          "queryReplacement": "={{ [$json.correlation_id, '14_cobertura_agenda', 'cobertura_resolvida', JSON.stringify($json)] }}"
+        }
+      },
+      "id": "02d3721f-f97f-569c-90f4-81870f260230",
+      "name": "Gravar evento",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2400,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Score = 100 − ETA×1,2 − (carga÷2)×3 + 15 se for a mesma unidade. Regra do MVP; ajuste os pesos com os dados reais.",
+        "height": 140,
+        "width": 360
+      },
+      "id": "fc5ff16b-ac59-5348-bffc-66089fd1be79",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        480,
+        -200
+      ]
+    }
+  ],
+  "connections": {
+    "Gatilho de cobertura": {
+      "main": [
+        [
+          {
+            "node": "Candidatos em sobreaviso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Candidatos em sobreaviso": {
+      "main": [
+        [
+          {
+            "node": "Ranking de cobertura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ranking de cobertura": {
+      "main": [
+        [
+          {
+            "node": "Há candidato?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Há candidato?": {
+      "main": [
+        [
+          {
+            "node": "Convidar profissional (app + WhatsApp)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telemedicina ou remarcação por prioridade (03)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convidar profissional (app + WhatsApp)": {
+      "main": [
+        [
+          {
+            "node": "Aguardar 5 min",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aguardar 5 min": {
+      "main": [
+        [
+          {
+            "node": "Resposta do convite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resposta do convite": {
+      "main": [
+        [
+          {
+            "node": "Aceitou?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aceitou?": {
+      "main": [
+        [
+          {
+            "node": "Reatribuir agenda (11)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telemedicina ou remarcação por prioridade (03)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reatribuir agenda (11)": {
+      "main": [
+        [
+          {
+            "node": "Daisy avisa os pacientes (10)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daisy avisa os pacientes (10)": {
+      "main": [
+        [
+          {
+            "node": "Gravar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telemedicina ou remarcação por prioridade (03)": {
+      "main": [
+        [
+          {
+            "node": "Gravar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "DaisyCare"
+    },
+    {
+      "name": "modelo-ouro"
+    }
+  ],
+  "meta": {
+    "descricao": "Escolhe o profissional de cobertura, convida por app/WhatsApp, espera 5 min e reatribui a agenda; sem aceite, telemedicina ou remarcação por prioridade.",
+    "aviso": "Simulação do MVP. Vincule suas credenciais (PostgreSQL) e defina a variável N8N_BASE_URL. Sem CPF nem dados clínicos."
+  }
+}

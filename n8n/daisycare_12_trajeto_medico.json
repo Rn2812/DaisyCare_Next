@@ -1,0 +1,300 @@
+{
+  "name": "12 · Trajeto do médico (ETA, trânsito e incidente)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 60
+            }
+          ]
+        }
+      },
+      "id": "e01bc4b6-eaf9-59df-b03c-82eae9ee3330",
+      "name": "A cada 60 s",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT medico_id, especialidade, unidade, primeira_consulta_em, ultima_posicao_em, eta_min FROM ops.deslocamento_medico WHERE status = 'a_caminho'",
+        "options": {}
+      },
+      "id": "844569c5-8279-5b3f-b6cd-ad8bbbbd0b22",
+      "name": "Médicos a caminho",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "daisy-medico-gps",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "731bed17-526d-596b-b6b0-bb8bed52b7c4",
+      "name": "Check-in GPS (app do médico)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        180
+      ],
+      "webhookId": "1c621487-92e8-5701-9cce-ebc046bb9263"
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = [];\nfor (const it of $input.all()) {\n  const m = it.json;\n  const min1 = (new Date(m.primeira_consulta_em) - Date.now()) / 60000;       // minutos até a 1ª consulta\n  const margem = Math.round(min1 - m.eta_min - 15);                           // 15 min de margem de segurança\n  const semSinal = (Date.now() - new Date(m.ultima_posicao_em)) / 60000;\n  out.push({ json: { ...m, margem_min: margem, sem_sinal_min: Math.round(semSinal),\n    correlation_id: 'MED-' + m.medico_id + '-' + Date.now().toString(36) } });\n}\nreturn out;"
+      },
+      "id": "352c11b9-666e-51fe-9ad7-606fa5c5e9aa",
+      "name": "Calcular margem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.sem_sinal_min }}",
+              "operation": "largerEqual",
+              "value2": 10
+            }
+          ]
+        }
+      },
+      "id": "72e39a32-cb09-505e-b981-f2a5e9e02106",
+      "name": "Incidente? (≥ 10 min sem sinal)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-cobertura",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ correlation_id: $json.correlation_id, medico_id: $json.medico_id, especialidade: $json.especialidade, unidade: $json.unidade, motivo: \"incidente_percurso\" }) }}",
+        "options": {}
+      },
+      "id": "f03740e3-2975-5bda-8866-f685d99328d9",
+      "name": "Acionar cobertura (14)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.margem_min }}",
+              "operation": "smaller",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "9d74e553-170d-535b-ade9-f5389fa6818f",
+      "name": "Atrasa? (margem < 0)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        960,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-aviso-central",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ correlation_id: $json.correlation_id, medico_id: $json.medico_id, atraso_previsto_min: -$json.margem_min, canal: [\"app\",\"whatsapp\"] }) }}",
+        "options": {}
+      },
+      "id": "000b1d89-b6cc-555d-b56e-a737ca56da61",
+      "name": "Aviso à central e recepção",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO audit.evento_integracao (correlation_id, workflow, evento, payload) VALUES ($1,$2,$3,$4::jsonb)",
+        "options": {
+          "queryReplacement": "={{ [$json.correlation_id, '12_trajeto_medico', 'trajeto_monitorado', JSON.stringify($json)] }}"
+        }
+      },
+      "id": "dfdc4759-ce23-5b81-94ee-e39a20caf4c8",
+      "name": "Gravar evento",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1200,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Sem sinal por 10 min = possível incidente. O protocolo prioriza o contato com a pessoa; a cobertura da agenda segue em paralelo (workflow 14).",
+        "height": 140,
+        "width": 360
+      },
+      "id": "75ed4be9-797a-589f-a0ab-82034a6e5550",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        720,
+        -200
+      ]
+    }
+  ],
+  "connections": {
+    "A cada 60 s": {
+      "main": [
+        [
+          {
+            "node": "Médicos a caminho",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Médicos a caminho": {
+      "main": [
+        [
+          {
+            "node": "Calcular margem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check-in GPS (app do médico)": {
+      "main": [
+        [
+          {
+            "node": "Calcular margem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular margem": {
+      "main": [
+        [
+          {
+            "node": "Incidente? (≥ 10 min sem sinal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Incidente? (≥ 10 min sem sinal)": {
+      "main": [
+        [
+          {
+            "node": "Acionar cobertura (14)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Atrasa? (margem < 0)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atrasa? (margem < 0)": {
+      "main": [
+        [
+          {
+            "node": "Aviso à central e recepção",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gravar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aviso à central e recepção": {
+      "main": [
+        [
+          {
+            "node": "Gravar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acionar cobertura (14)": {
+      "main": [
+        [
+          {
+            "node": "Gravar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "DaisyCare"
+    },
+    {
+      "name": "modelo-ouro"
+    }
+  ],
+  "meta": {
+    "descricao": "Monitora o deslocamento de cada médico escalado e avisa a central ou aciona a cobertura (14).",
+    "aviso": "Simulação do MVP. Vincule suas credenciais (PostgreSQL) e defina a variável N8N_BASE_URL. Sem CPF nem dados clínicos."
+  }
+}

@@ -1,0 +1,23 @@
+DAISYCARE - COMO ABRIR
+
+1. Extraia TODO o conteudo do ZIP numa pasta (nao abra de dentro do ZIP).
+2. De dois cliques em Iniciar_DaisyCare.bat. O Chrome abre em http://localhost:8765
+   com o sistema e as falas gravadas (pasta falas).
+3. Clique em "Ativar voz oficial Daisy" uma vez para liberar o som.
+4. Para encerrar, feche a janela preta do servidor.
+
+Conteudo da pasta (mantenha tudo junto):
+  DaisyCare_App_v40_91_Voz_Natural.html
+  falas\            gravacoes da Daisy (.mp3); falas\auto = respostas completas
+  Iniciar_DaisyCare.bat
+  servidor_daisycare.ps1
+
+Observacoes
+- Voz: por padrao a Daisy fala a resposta inteira (datas, horarios, especialidades) por arquivos
+  prontos em falas\auto. Suas gravacoes (menu, emergencia etc.) continuam sendo usadas onde existem.
+  O botao "Voz:" abaixo do chat alterna para as gravacoes curtas.
+- Se abrir so o HTML (sem o servidor), os audios de falas\ nao carregam. Nesse caso a Daisy
+  toca so os clipes curtos embutidos.
+- Para trocar uma fala, substitua o arquivo em falas\ mantendo o mesmo nome.
+- Se a porta 8765 estiver em uso: powershell -File servidor_daisycare.ps1 -Port 8766
+- Dados ficticios; nenhuma conversa ou CPF e gravado.

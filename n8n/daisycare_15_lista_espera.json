@@ -1,0 +1,353 @@
+{
+  "name": "15 · Lista de espera e encaixe (vaga liberada)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "daisy-vaga-liberada",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "ac852cd3-e725-5542-9537-8d6b9312e21e",
+      "name": "Vaga liberada",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "7bb3ba13-7bc6-5ef2-9f07-a977d17f7ec8"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT paciente_token, prioridade, criado_em FROM ops.lista_espera WHERE especialidade = $1 AND unidade = $2 AND status = 'aguardando' ORDER BY prioridade DESC, criado_em ASC LIMIT 3",
+        "options": {
+          "queryReplacement": "={{ [$json.body.especialidade, $json.body.unidade] }}"
+        }
+      },
+      "id": "67c58793-f6be-57c6-ab6f-0c84dd9b11d0",
+      "name": "Lista de espera (sem dado clínico)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const v = $('Vaga liberada').first().json.body;\nconst fila = $input.all().map(i => i.json);\nreturn [{ json: { ...v, convidado: fila[0] || null, tem_fila: fila.length > 0, correlation_id: v.correlation_id || ('VAG-' + Date.now().toString(36)) } }];"
+      },
+      "id": "04fe4ee0-a573-5b61-973a-00b6c2241952",
+      "name": "Escolher quem convidar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.tem_fila }}",
+              "operation": "equal",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "id": "2bdd233d-3cde-5c67-b575-52c198837739",
+      "name": "Há alguém na lista?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-agente-aviso",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ correlation_id: $json.correlation_id, tipo: \"vaga_disponivel\", paciente_token: $json.convidado.paciente_token, janela_min: 10 }) }}",
+        "options": {}
+      },
+      "id": "9103dc25-7171-5f64-9897-d8d6f392a938",
+      "name": "Daisy convida (app/WhatsApp)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 10,
+        "unit": "minutes"
+      },
+      "id": "50804aa8-7c24-5fab-89ba-54f4235a0cd1",
+      "name": "Aguardar 10 min",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT aceitou FROM ops.convite_vaga WHERE correlation_id = $1 ORDER BY criado_em DESC LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ [$('Escolher quem convidar').first().json.correlation_id] }}"
+        }
+      },
+      "id": "1e244174-63eb-528a-a2a1-70cb47e56466",
+      "name": "Resposta do paciente",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1440,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.aceitou }}",
+              "operation": "equal",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "id": "2aa3d6f9-8e89-5a77-b184-5b88a28626a0",
+      "name": "Aceitou?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { correlation_id: $('Escolher quem convidar').first().json.correlation_id, evento: 'encaixe_confirmado' } }];"
+      },
+      "id": "3e3e5520-549b-5918-8982-0d7b710a9114",
+      "name": "Encaixe confirmado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { correlation_id: $('Escolher quem convidar').first().json.correlation_id, evento: 'convite_expirado' } }];"
+      },
+      "id": "fa8d466a-35c3-5887-b857-bc900550974f",
+      "name": "Vaga volta à fila (próximo)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { correlation_id: $json.correlation_id, evento: 'vaga_sem_fila' } }];"
+      },
+      "id": "055c6946-13b4-5af4-9472-8fa0e826333b",
+      "name": "Sem lista: vaga aberta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO audit.evento_integracao (correlation_id, workflow, evento, payload) VALUES ($1,$2,$3,$4::jsonb)",
+        "options": {
+          "queryReplacement": "={{ [$json.correlation_id, '15_lista_espera', 'lista_espera', JSON.stringify($json)] }}"
+        }
+      },
+      "id": "32cdf524-ce67-50ed-bb2b-f22621f4cfd0",
+      "name": "Gravar evento",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2160,
+        -60
+      ]
+    }
+  ],
+  "connections": {
+    "Vaga liberada": {
+      "main": [
+        [
+          {
+            "node": "Lista de espera (sem dado clínico)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lista de espera (sem dado clínico)": {
+      "main": [
+        [
+          {
+            "node": "Escolher quem convidar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escolher quem convidar": {
+      "main": [
+        [
+          {
+            "node": "Há alguém na lista?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Há alguém na lista?": {
+      "main": [
+        [
+          {
+            "node": "Daisy convida (app/WhatsApp)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sem lista: vaga aberta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daisy convida (app/WhatsApp)": {
+      "main": [
+        [
+          {
+            "node": "Aguardar 10 min",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aguardar 10 min": {
+      "main": [
+        [
+          {
+            "node": "Resposta do paciente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resposta do paciente": {
+      "main": [
+        [
+          {
+            "node": "Aceitou?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aceitou?": {
+      "main": [
+        [
+          {
+            "node": "Encaixe confirmado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Vaga volta à fila (próximo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Encaixe confirmado": {
+      "main": [
+        [
+          {
+            "node": "Gravar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vaga volta à fila (próximo)": {
+      "main": [
+        [
+          {
+            "node": "Gravar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sem lista: vaga aberta": {
+      "main": [
+        [
+          {
+            "node": "Gravar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "DaisyCare"
+    },
+    {
+      "name": "modelo-ouro"
+    }
+  ],
+  "meta": {
+    "descricao": "Quando uma vaga é liberada (cancelamento ou cobertura), convida a lista de espera por prioridade e confirma o encaixe.",
+    "aviso": "Simulação do MVP. Vincule suas credenciais (PostgreSQL) e defina a variável N8N_BASE_URL. Sem CPF nem dados clínicos."
+  }
+}
