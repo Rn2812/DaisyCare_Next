@@ -4,6 +4,8 @@
 
 Projeto do Challenge FIAP × Hospital Mater Dei (Data Science, 2026), apresentado no **FIAP NEXT 2026**. Desenvolvimento, dados, automações e testes: **Rodrigo Nillo**.
 
+**▶ [Abrir a demo no navegador](https://rn2812.github.io/DaisyCare_Next/)** · [Pitch em PDF](docs/pitch/DaisyCare_Pitch_FIAP_NEXT_2026.pdf) · [Notebook de ML](analytics/ml/DaisyCare_ML_previsao_comparecimento.ipynb)
+
 > Todos os dados são fictícios ou sintéticos. Não há dado real de paciente, CPF ou conversa gravada.
 
 ![Chat da Daisy reagendando uma consulta](docs/imagens/02_chat_reagendar.png)
@@ -42,6 +44,8 @@ Base sintética de **200 mil agendamentos em 10 hospitais** (set/2025 a ago/2026
 - **Produto:** regras de negócio, jornada do paciente, acessibilidade (zoom, alto contraste, voz) e pitch executivo.
 
 ## Como rodar
+
+**No navegador:** abra a [demo publicada](https://rn2812.github.io/DaisyCare_Next/), sem instalar nada.
 
 **Windows:** abra `app/Iniciar_DaisyCare.bat`. O Chrome abre em `http://localhost:8765`.
 
