@@ -2,7 +2,7 @@
 
 **Assistente virtual que reduz faltas e reaproveita vagas na jornada do paciente.** A Daisy confirma, cancela e reagenda consultas pelo app e pelo WhatsApp, por texto e voz. Cada horário liberado vai para uma fila de encaixe, e cada evento chega ao Power BI.
 
-> 🥇 **Medalha de ouro no FIAP NEXT 2026**: o DaisyCare foi premiado como a melhor solução entre 10 projetos.
+> 🥇 **Medalha de ouro no FIAP NEXT 2026**: o DaisyCare foi premiado como a melhor solução entre 10 projetos da turma de Data Science.
 
 Projeto em equipe (Data Bridge) do Challenge FIAP × Hospital Mater Dei (Data Science, 2026), premiado no **FIAP NEXT 2026**.
 
@@ -102,7 +102,7 @@ Apresentação completa: [docs/pitch/DaisyCare_Pitch_FIAP_NEXT_2026.pdf](docs/pi
 
 ## Premiação
 
-O DaisyCare recebeu a **medalha de ouro no FIAP NEXT 2026**, como a melhor solução entre 10 projetos apresentados.
+O DaisyCare recebeu a **medalha de ouro no FIAP NEXT 2026**, como a melhor solução entre os 10 projetos da turma de Data Science.
 
 <img src="docs/imagens/premiacao_fiap_next_2026.jpg" alt="Equipe do DaisyCare com os shapes da premiação no FIAP NEXT 2026" width="420">
 

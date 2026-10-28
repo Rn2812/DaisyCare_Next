@@ -1,7 +1,7 @@
 # Histórico de versões
 
 ## FIAP NEXT 2026
-- 🥇 Medalha de ouro: melhor solução entre 10 projetos.
+- 🥇 Medalha de ouro: melhor solução entre os 10 projetos da turma de Data Science.
 
 ## v40.93 · chat e WhatsApp
 - Opção 1 (Confirmar consulta) mostra a consulta e oferece: 1 confirmar presença, 2 cancelar, 3 reagendar.
