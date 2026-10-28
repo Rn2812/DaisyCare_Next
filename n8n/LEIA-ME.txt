@@ -1,18 +1,26 @@
-DaisyCare · Modelo ouro · workflows n8n 12 a 16 (simulação do MVP)
+DaisyCare · Modelo Ouro · workflows n8n 12 a 17
 
-Arquivos: daisycare_12_trajeto_medico, 13_controle_atendimentos, 14_cobertura_agenda, 15_lista_espera, 16_indicadores_sucesso.
+Arquivos
+  12 trajeto_medico       Google Routes com intervalo adaptativo (5 min; 1 min quando a folga < 15 min) e incidente
+  13 fila_digital         fila por médico no Redis, espera prevista e avisos ao paciente
+  14 cobertura_agenda     ranking de médicos, convite e reatribuição da agenda
+  15 lista_espera         vaga liberada (cancelamento/reagendamento) -> convite ao próximo da fila
+  16 indicadores_sucesso  reversão de faltas, reversão de vagas e receita recuperada (estimativa)
+  17 daisy_conversa       conversa livre com a Daisy (OpenAI), só com base aprovada e sem acesso a dados
 
-Como usar
+Como importar
 1. No n8n: Workflows > Import from file (um por vez). Todos entram desativados.
-2. Defina a variável de ambiente N8N_BASE_URL (usada nas chamadas entre workflows) e, opcional, TICKET_MEDIO.
-3. Nos nós PostgreSQL, selecione a credencial do banco do DaisyCare (não vai no arquivo).
+2. Credenciais: PostgreSQL e Redis (não vão nos arquivos).
+3. Variáveis de ambiente: N8N_BASE_URL, GOOGLE_MAPS_API_KEY, OPENAI_API_KEY, OPENAI_MODEL e, opcional, TICKET_MEDIO.
 4. Ajuste as tabelas (ops.*, audit.evento_integracao) aos nomes reais. No MVP são fictícias.
-5. Ative primeiro 14 e 15 (recebem chamadas), depois 12, 13 e 16.
+5. Ative primeiro 14, 15 e 17 (recebem chamadas), depois 12, 13 e 16.
 
-Como se ligam aos 10 workflows existentes
-12 -> 14 (incidente) | 13 -> 14 (atraso > 30 min) | 14 -> 11 (reatribui agenda), 10 (Daisy avisa), 03 (remarcação)
-02/03 -> 15 (vaga liberada) -> 10 (convite) | 06 + PostgreSQL -> 16 -> Power BI
+Como se ligam aos workflows 01 a 11
+12 -> 13 (atraso previsto) e 14 (incidente) | 13 -> 11 (atraso > 20 min), 14 (> 30 min), 05A (NPS ao fim da consulta)
+14 -> 11 (reatribui agenda), 10 (Daisy avisa), 03 (remarcação) | 02/03 -> 15 (vaga liberada) -> 10 (convite)
+10 (Agente IA) -> 17 (conversa livre) | 06 + PostgreSQL -> 16 -> Power BI
 
 Cuidados: sem CPF e sem dado clínico; ids pseudonimizados; correlation_id em todo evento.
-Receita recuperada é estimativa; metas (40% e 50%) e pesos do ranking são sugestões a validar.
-Estrutura padrão do n8n, mas não foi importada em uma instância real aqui: teste em ambiente de homologação.
+Posição bruta do médico só no Redis, apagada em até 6 h.
+Receita recuperada é estimativa; metas e pesos do ranking são sugestões a validar.
+Os JSON seguem a estrutura padrão do n8n, mas ainda não rodaram em uma instância real: teste em homologação.

@@ -1,0 +1,420 @@
+{
+  "name": "17 · Daisy conversa (OpenAI, só conversa)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "daisy-conversa",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e2eb1e57-dcbc-5157-9f43-ffcf60f0ae23",
+      "name": "Conversa livre (do Agente IA 10)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        100
+      ],
+      "webhookId": "21b987ff-c772-5575-857f-155968a60b18"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Mascara dados pessoais e detecta urgência antes de qualquer chamada externa.\nconst b = $json.body || {};\nconst txt = String(b.texto || '').slice(0, 1000);\nconst mask = s => s\n  .replace(/\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b/g, '[cpf]')\n  .replace(/\\b\\d{12,20}\\b/g, '[carteirinha]')\n  .replace(/\\(?\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}/g, '[telefone]')\n  .replace(/[\\w.+-]+@[\\w-]+\\.[\\w.]+/g, '[email]')\n  .replace(/(meu nome (é|e)|me chamo)\\s+[^,.!?]+/gi, '$1 [nome]');\nconst urg = /(dor no peito|falta de ar|não consigo respirar|desmai|sangrando muito|convuls|avc|derrame|infarto|suic|me matar|overdose)/i.test(txt);\nconst hist = (b.historico || []).slice(-6).map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: mask(String(m.content || '')).slice(0, 600) }));\nreturn { json: { correlation_id: b.correlation_id || ('CONV-' + Date.now().toString(36)), canal: b.canal || 'app',\n  modo: b.modo_infantil === true ? 'infantil' : 'geral', texto: mask(txt), historico: hist, urgencia: urg } };"
+      },
+      "id": "3871c7ff-d6cf-5a97-b860-683210f72ae8",
+      "name": "Mascarar dados e checar urgência",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.urgencia }}",
+              "operation": "equal",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "808fcfdc-ffba-5728-85b7-55ba71a49b6c",
+      "name": "Urgência?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        480,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: { ...$('Mascarar dados e checar urgência').item.json, acao: 'urgencia',\n  resposta: 'Isso pode ser uma urgência. Procure agora o pronto-socorro mais próximo ou ligue 192 (SAMU). Se estiver no hospital, fale com a recepção.' } };"
+      },
+      "id": "6ed39964-38b8-54f3-a074-6d79b6ea71d3",
+      "name": "Resposta de urgência",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/moderations",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'omni-moderation-latest', input: $json.texto }) }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENAI_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "685b117e-99f8-585a-850a-bb6c059c1946",
+      "name": "Moderação da entrada (OpenAI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.results[0].flagged }}",
+              "operation": "equal",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "01446c27-f22f-5845-9ea6-db9cd58a74ad",
+      "name": "Sinalizado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        960,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: { ...$('Mascarar dados e checar urgência').item.json, acao: 'bloqueado_moderacao',\n  resposta: 'Prefiro não seguir com esse assunto. Posso ajudar com dúvidas sobre o hospital, uma curiosidade ou uma história. Se precisar, chamo um atendente (opção 11).' } };"
+      },
+      "id": "64c01b0c-aa4a-52af-9233-1115c4e99109",
+      "name": "Resposta segura",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT titulo, texto FROM conteudo.base_aprovada WHERE status = 'aprovado' AND publico IN ('todos', $2) AND to_tsvector('portuguese', titulo || ' ' || texto) @@ plainto_tsquery('portuguese', $1) ORDER BY revisado_em DESC LIMIT 4",
+        "options": {
+          "queryReplacement": "={{ [$('Mascarar dados e checar urgência').item.json.texto, $('Mascarar dados e checar urgência').item.json.modo] }}"
+        }
+      },
+      "id": "51675ce3-1f1e-5051-89c3-44f7ac62e288",
+      "name": "Base aprovada (RAG)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1200,
+        260
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Monta as mensagens com o contexto aprovado (RAG) e as regras da Daisy.\nconst base = $('Mascarar dados e checar urgência').first().json;\nconst ctx = $input.all().map(i => i.json).filter(r => r && r.texto).map(r => '- ' + r.titulo + ': ' + r.texto).join('\\n') || '(sem conteúdo aprovado para esta pergunta)';\nconst SYSTEM = \"Você é a Daisy, assistente virtual do hospital. Neste modo você só conversa: tira dúvidas gerais sobre o hospital usando apenas o CONTEXTO aprovado e conta curiosidades e histórias curtas e gentis. Regras: 1) Não faz diagnóstico, não fala de doses, remédios, resultados de exames, preços, cobertura de convênio e não opina sobre médicos ou equipes. 2) Não agenda, não cancela, não cobra e não consulta fila. Se o paciente pedir algo assim, responda só [[VOLTAR_AO_10]]. 3) Se a dúvida sobre o hospital não estiver no CONTEXTO, diga que não tem essa informação e ofereça o atendente humano (opção 11). 4) Nunca peça nome, CPF, carteirinha, endereço ou telefone. 5) Em modo infantil: linguagem simples, histórias de até 150 palavras, sem medo, violência ou temas adultos, e sem perguntar dados da criança. 6) Até 120 palavras, português do Brasil, tom acolhedor.\";\nreturn [{ json: { ...base, contexto_itens: $input.all().filter(i => i.json && i.json.texto).length,\n  body: { model: $env.OPENAI_MODEL, temperature: 0.6, max_tokens: 400,\n    messages: [{ role: 'system', content: SYSTEM + '\\nModo: ' + base.modo + '.\\nCONTEXTO:\\n' + ctx }, ...base.historico, { role: 'user', content: base.texto }] } } }];"
+      },
+      "id": "6e463eaa-5ddf-5298-99f3-09c0087c5e3b",
+      "name": "Montar mensagens",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENAI_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "2e46e76c-ff2c-5bb2-8a1b-462e4800c873",
+      "name": "OpenAI · resposta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Filtro de saída: devolve ao Agente IA (10) se o assunto for transacional; bloqueia dose ou preço.\nconst base = $('Montar mensagens').item.json;\nlet txt = String((($json.choices || [])[0] || {}).message?.content || '').trim();\nlet acao = 'respondido';\nif (txt.includes('[[VOLTAR_AO_10]]')) { acao = 'voltar_ao_10'; txt = ''; }\nelse if (/\\b\\d+([.,]\\d+)?\\s?(mg|ml|mcg|gotas|comprimidos?)\\b/i.test(txt) || /R\\$\\s?\\d/.test(txt)) {\n  acao = 'bloqueado_saida';\n  txt = 'Sobre remédios, doses ou valores, quem orienta é a equipe do hospital. Quer que eu chame um atendente (opção 11)?';\n}\nif (!txt && acao === 'respondido') { acao = 'sem_resposta'; txt = 'Não consegui responder agora. Posso chamar um atendente (opção 11)?'; }\nreturn { json: { correlation_id: base.correlation_id, canal: base.canal, modo: base.modo, acao, resposta: txt,\n  contexto_itens: base.contexto_itens, tokens: ($json.usage || {}).total_tokens || null } };"
+      },
+      "id": "8ec68624-b2e2-5265-a097-0932d647ff88",
+      "name": "Filtro de saída",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO audit.evento_integracao (correlation_id, workflow, evento, payload) VALUES ($1,$2,$3,$4::jsonb)",
+        "options": {
+          "queryReplacement": "={{ [$json.correlation_id, '17_daisy_conversa', 'conversa_livre', JSON.stringify({ canal: $json.canal, modo: $json.modo, acao: $json.acao, contexto_itens: $json.contexto_itens || 0, tokens: $json.tokens || null })] }}"
+        }
+      },
+      "id": "b1d6a0c0-449e-5017-bbc6-243f8d6b710c",
+      "name": "Gravar evento",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2160,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ correlation_id: $json.correlation_id, acao: $json.acao, resposta: $json.resposta }) }}",
+        "options": {}
+      },
+      "id": "16a62b96-75cf-56d2-bf83-d5e0c9c73a23",
+      "name": "Responder ao Agente IA",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2160,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Só conversa: não tem nenhum nó que escreva em agenda, fila, Pix ou CRM. Assunto transacional volta ao Agente IA (10) pela ação voltar_ao_10. Dados pessoais mascarados antes da OpenAI; contrate a API com DPA e retenção zero. O evento grava só um resumo, nunca a transcrição. Variáveis: OPENAI_API_KEY, OPENAI_MODEL.",
+        "height": 180,
+        "width": 440
+      },
+      "id": "91c1c6d1-3f32-5e59-aefd-ac241dfeba2b",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        700,
+        -320
+      ]
+    }
+  ],
+  "connections": {
+    "Conversa livre (do Agente IA 10)": {
+      "main": [
+        [
+          {
+            "node": "Mascarar dados e checar urgência",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mascarar dados e checar urgência": {
+      "main": [
+        [
+          {
+            "node": "Urgência?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Urgência?": {
+      "main": [
+        [
+          {
+            "node": "Resposta de urgência",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Moderação da entrada (OpenAI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resposta de urgência": {
+      "main": [
+        [
+          {
+            "node": "Gravar evento",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Responder ao Agente IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Moderação da entrada (OpenAI)": {
+      "main": [
+        [
+          {
+            "node": "Sinalizado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sinalizado?": {
+      "main": [
+        [
+          {
+            "node": "Resposta segura",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Base aprovada (RAG)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resposta segura": {
+      "main": [
+        [
+          {
+            "node": "Gravar evento",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Responder ao Agente IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Base aprovada (RAG)": {
+      "main": [
+        [
+          {
+            "node": "Montar mensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar mensagens": {
+      "main": [
+        [
+          {
+            "node": "OpenAI · resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI · resposta": {
+      "main": [
+        [
+          {
+            "node": "Filtro de saída",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtro de saída": {
+      "main": [
+        [
+          {
+            "node": "Gravar evento",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Responder ao Agente IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "DaisyCare"
+    },
+    {
+      "name": "modelo-ouro"
+    }
+  ],
+  "meta": {
+    "descricao": "Responde conversa livre roteada pelo Agente IA (10): dúvidas gerais com base aprovada, curiosidades e histórias, sem acesso a agenda, fila, pagamento ou CRM.",
+    "aviso": "Simulação. Vincule as credenciais (PostgreSQL, Redis) e defina as variáveis indicadas antes de ativar. Sem CPF nem dados clínicos."
+  }
+}

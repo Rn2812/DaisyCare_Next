@@ -1,0 +1,167 @@
+FORMULAS DAX FINAIS — SMART QUEUE INTELIGENTE (PÁGINAS 5 E 6)
+
+TABELA BASE
+'dataset_03_logs_daisy_n8n_IA_logistica_200k'
+
+BLOCO A — NEGOCIO (PÁGINA 5)
+
+1. Qtd_Vagas_Liberadas
+Qtd_Vagas_Liberadas =
+CALCULATE(
+    COUNTROWS('dataset_03_logs_daisy_n8n_IA_logistica_200k'),
+    'dataset_03_logs_daisy_n8n_IA_logistica_200k'[evento] = "vaga_liberada"
+)
+
+2. Qtd_Pacientes_Aptos
+Qtd_Pacientes_Aptos =
+CALCULATE(
+    COUNTROWS('dataset_03_logs_daisy_n8n_IA_logistica_200k'),
+    'dataset_03_logs_daisy_n8n_IA_logistica_200k'[paciente_apto] = 1
+)
+
+3. Qtd_Convites_Enviados
+Qtd_Convites_Enviados =
+CALCULATE(
+    COUNTROWS('dataset_03_logs_daisy_n8n_IA_logistica_200k'),
+    'dataset_03_logs_daisy_n8n_IA_logistica_200k'[convite_enviado_flag] = 1
+)
+
+4. Qtd_Convites_Aceitos
+Qtd_Convites_Aceitos =
+CALCULATE(
+    COUNTROWS('dataset_03_logs_daisy_n8n_IA_logistica_200k'),
+    'dataset_03_logs_daisy_n8n_IA_logistica_200k'[convite_aceito_flag] = 1
+)
+
+5. Qtd_Encaixes_Confirmados
+Qtd_Encaixes_Confirmados =
+CALCULATE(
+    COUNTROWS('dataset_03_logs_daisy_n8n_IA_logistica_200k'),
+    'dataset_03_logs_daisy_n8n_IA_logistica_200k'[encaixe_confirmado_flag] = 1
+)
+
+6. Taxa_Aceite
+Taxa_Aceite =
+DIVIDE([Qtd_Convites_Aceitos], [Qtd_Convites_Enviados], 0)
+
+7. Taxa_Aproveitamento
+Taxa_Aproveitamento =
+DIVIDE([Qtd_Encaixes_Confirmados], [Qtd_Vagas_Liberadas], 0)
+
+8. Score_Medio
+Score_Medio =
+AVERAGE('dataset_03_logs_daisy_n8n_IA_logistica_200k'[score_viabilidade])
+
+9. Receita_Em_Risco_IA
+Receita_Em_Risco_IA =
+VAR AgendamentosRisco =
+    CALCULATETABLE(
+        VALUES('dataset_03_logs_daisy_n8n_IA_logistica_200k'[id_agendamento]),
+        'dataset_03_logs_daisy_n8n_IA_logistica_200k'[evento] = "vaga_liberada"
+    )
+RETURN
+CALCULATE(
+    SUM('dataset_01_agendamentos_conversao_200k'[ticket_estimado]),
+    TREATAS(
+        AgendamentosRisco,
+        'dataset_01_agendamentos_conversao_200k'[id_agendamento]
+    )
+)
+
+10. Receita_Preservada_IA
+Receita_Preservada_IA =
+VAR AgendamentosPreservados =
+    CALCULATETABLE(
+        VALUES('dataset_03_logs_daisy_n8n_IA_logistica_200k'[id_agendamento]),
+        'dataset_03_logs_daisy_n8n_IA_logistica_200k'[encaixe_confirmado_flag] = 1
+    )
+RETURN
+CALCULATE(
+    SUM('dataset_01_agendamentos_conversao_200k'[ticket_estimado]),
+    TREATAS(
+        AgendamentosPreservados,
+        'dataset_01_agendamentos_conversao_200k'[id_agendamento]
+    )
+)
+
+11. Taxa_Preservacao_Receita_IA
+Taxa_Preservacao_Receita_IA =
+DIVIDE([Receita_Preservada_IA], [Receita_Em_Risco_IA], 0)
+
+GRAFICOS FINAIS — PÁGINA 5
+A. Por que Pacientes Não São Elegíveis?
+- Eixo X: motivo_inaptidao
+- Valor: Qtd_Eventos
+
+B. Taxa de Aptidão por Transporte
+- Eixo X: meio_recomendado
+- Valor: Taxa_Aptidao_Transporte
+
+C. Dispersão Tempo Recomendado vs Score de Viabilidade
+- Eixo X: tempo_recomendado_min
+- Eixo Y: score_viabilidade
+- Legenda: meio_recomendado
+- Tamanho: Qtd_Eventos (ou contagem de id_log)
+
+D. Receita em Risco vs Receita Preservada pela IA
+- Eixo X: AnoMes
+- Valores: Receita_Preservada_IA, Receita_Em_Risco_IA
+
+KPIS FINAIS — PÁGINA 5
+- Qtd_Vagas_Liberadas
+- Qtd_Pacientes_Aptos
+- Qtd_Convites_Enviados
+- Qtd_Convites_Aceitos
+- Taxa_Aceite
+- Qtd_Encaixes_Confirmados
+- Taxa_Aproveitamento
+- Score_Medio
+
+BLOCO B — IA + DECISAO (PÁGINA 6)
+
+12. Taxa_Aptidao
+Taxa_Aptidao =
+DIVIDE([Qtd_Pacientes_Aptos], [Qtd_Eventos], 0)
+
+13. Taxa_Aptidao_Transporte
+Taxa_Aptidao_Transporte =
+AVERAGE('dataset_03_logs_daisy_n8n_IA_logistica_200k'[paciente_apto])
+
+14. Tempo_Medio_Deslocamento
+Tempo_Medio_Deslocamento =
+AVERAGE('dataset_03_logs_daisy_n8n_IA_logistica_200k'[tempo_recomendado_min])
+
+GRAFICOS FINAIS — PÁGINA 6
+A. Taxa de Aptidão por Meio de Transporte
+- Eixo X: meio_recomendado
+- Valor: Taxa_Aptidao_Transporte
+
+B. Tempo Médio de Deslocamento por Meio de Transporte
+- Eixo Y: meio_recomendado
+- Valor: Tempo_Medio_Deslocamento
+
+C. Taxa de Aptidão por Especialidade
+- Eixo X: especialidade
+- Valor: Taxa_Aptidao
+
+D. Evolução da Taxa de Aceite no Tempo
+- Eixo X: data_evento
+- Valor: Taxa_Aceite
+
+E. Encaixes Confirmados por Meio Recomendado
+- Eixo X: meio_recomendado
+- Valor: Qtd_Encaixes_Confirmados
+
+KPIS FINAIS — PÁGINA 6
+- Taxa_Aptidao
+- Tempo_Medio_Deslocamento
+- Taxa_Aceite
+- Qtd_Encaixes_Confirmados
+
+ORDEM FINAL DAS PAGINAS
+1. Desempenho Operacional
+2. Resultados Financeiros
+3. Análise da Jornada do Paciente
+4. Automação & IA (Smart Queue)
+5. Smart Queue Inteligente (Negócio)
+6. Smart Queue Inteligente (IA + Decisão)

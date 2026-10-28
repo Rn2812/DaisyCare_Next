@@ -1,0 +1,55 @@
+FORMULAS DAX FINAIS — RESULTADOS FINANCEIROS (PÁGINA 2)
+
+TABELA BASE
+'dataset_01_agendamentos_conversao_200k'
+
+1. Receita_Potencial
+Receita_Potencial =
+SUM('dataset_01_agendamentos_conversao_200k'[ticket_estimado])
+
+2. Receita_Convertida
+Receita_Convertida =
+CALCULATE(
+    SUM('dataset_01_agendamentos_conversao_200k'[ticket_estimado]),
+    'dataset_01_agendamentos_conversao_200k'[target_conversao] = 1
+)
+
+3. Gap_Receita
+Gap_Receita =
+[Receita_Potencial] - [Receita_Convertida]
+
+4. Aproveitamento_Receita
+Aproveitamento_Receita =
+DIVIDE([Receita_Convertida], [Receita_Potencial], 0)
+
+5. Ticket_Medio
+Ticket_Medio =
+DIVIDE([Receita_Potencial], [Qtd_Agendamentos], 0)
+
+6. Aproveitamento_Receita_Especialidade
+Aproveitamento_Receita_Especialidade =
+DIVIDE([Receita_Convertida], [Receita_Potencial], 0)
+
+GRAFICOS FINAIS
+A. Receita Convertida vs Receita Potencial
+- Eixo X: Calendario[AnoMes]
+- Valores: Receita_Convertida, Receita_Potencial
+
+B. Aproveitamento da Receita ao Longo do Tempo
+- Eixo X: Calendario[AnoMes]
+- Valor: Aproveitamento_Receita
+
+C. Receita Convertida por Canal de Agendamento
+- Eixo X: canal_agendamento
+- Valor: Receita_Convertida
+
+D. Receita Convertida vs Gap de Receita por Especialidade
+- Eixo X: especialidade
+- Valores: Receita_Convertida, Gap_Receita
+
+KPIS FINAIS
+- Receita_Convertida
+- Receita_Potencial
+- Gap_Receita
+- Ticket_Medio
+- Aproveitamento_Receita

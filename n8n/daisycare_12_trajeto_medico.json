@@ -1,39 +1,52 @@
 {
-  "name": "12 · Trajeto do médico (ETA, trânsito e incidente)",
+  "name": "12 · Trajeto do médico (Google Routes, intervalo adaptativo e incidente)",
   "nodes": [
     {
       "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "seconds",
-              "secondsInterval": 60
-            }
-          ]
-        }
+        "httpMethod": "POST",
+        "path": "daisy-medico-trajeto",
+        "responseMode": "onReceived",
+        "options": {}
       },
-      "id": "e01bc4b6-eaf9-59df-b03c-82eae9ee3330",
-      "name": "A cada 60 s",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
+      "id": "98e1c9f2-9822-54e3-88c5-97ea51fae2d7",
+      "name": "Check-in de saída ou chegada (app do médico)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
       "position": [
         0,
-        0
+        -260
+      ],
+      "webhookId": "789311b8-3d5b-5ba1-874c-90de9926d74e"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Check-in de saída abre um trajeto; check-in na unidade fecha. Até 3 trajetos por dia.\nconst b = $json.body || {};\nconst janelas = ['ida', 'retorno_almoco', 'segundo_local'];\nif (!b.medico_id || !['saida', 'chegada'].includes(b.evento)) throw new Error('payload inválido');\nif (b.evento === 'saida' && !janelas.includes(b.janela)) throw new Error('janela deve ser ida, retorno_almoco ou segundo_local');\nreturn { json: { medico_id: String(b.medico_id), evento: b.evento, janela: b.janela || null,\n  unidade: b.unidade || null, correlation_id: b.correlation_id || ('MED-' + b.medico_id + '-' + Date.now().toString(36)) } };"
+      },
+      "id": "68e8d712-f2c2-5366-afbd-31b1b14a5ab3",
+      "name": "Validar check-in",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -260
       ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT medico_id, especialidade, unidade, primeira_consulta_em, ultima_posicao_em, eta_min FROM ops.deslocamento_medico WHERE status = 'a_caminho'",
-        "options": {}
+        "query": "SELECT * FROM ops.registrar_trajeto($1, $2, $3, $4)  -- abre (saida) ou fecha (chegada); recusa o 4º trajeto do dia",
+        "options": {
+          "queryReplacement": "={{ [$json.medico_id, $json.evento, $json.janela, $json.unidade] }}"
+        }
       },
-      "id": "844569c5-8279-5b3f-b6cd-ad8bbbbd0b22",
-      "name": "Médicos a caminho",
+      "id": "92215caa-5a9f-5625-8aa4-4871b828a41f",
+      "name": "Abrir ou fechar trajeto",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        240,
-        0
+        480,
+        -260
       ]
     },
     {
@@ -43,48 +56,223 @@
         "responseMode": "onReceived",
         "options": {}
       },
-      "id": "731bed17-526d-596b-b6b0-bb8bed52b7c4",
-      "name": "Check-in GPS (app do médico)",
+      "id": "f76a4553-be68-5547-96a0-6260948e3d43",
+      "name": "Ping GPS (app do médico)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
         0,
-        180
+        -60
       ],
-      "webhookId": "1c621487-92e8-5701-9cce-ebc046bb9263"
+      "webhookId": "e285015f-b4df-5ac0-8519-deaffd872f1f"
     },
     {
       "parameters": {
-        "jsCode": "const out = [];\nfor (const it of $input.all()) {\n  const m = it.json;\n  const min1 = (new Date(m.primeira_consulta_em) - Date.now()) / 60000;       // minutos até a 1ª consulta\n  const margem = Math.round(min1 - m.eta_min - 15);                           // 15 min de margem de segurança\n  const semSinal = (Date.now() - new Date(m.ultima_posicao_em)) / 60000;\n  out.push({ json: { ...m, margem_min: margem, sem_sinal_min: Math.round(semSinal),\n    correlation_id: 'MED-' + m.medico_id + '-' + Date.now().toString(36) } });\n}\nreturn out;"
+        "operation": "set",
+        "key": "=gps:{{ $json.body.medico_id }}",
+        "value": "={{ JSON.stringify({ lat: $json.body.lat, lng: $json.body.lng, em: new Date().toISOString() }) }}",
+        "keyType": "string",
+        "expire": true,
+        "ttl": 21600
       },
-      "id": "352c11b9-666e-51fe-9ad7-606fa5c5e9aa",
-      "name": "Calcular margem",
+      "id": "f7b36a21-8237-5142-9c93-eef53b48249e",
+      "name": "Guardar posição no Redis (TTL 6 h)",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        240,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "3ecd4cbb-9213-5be8-9e76-c6887c5025fc",
+      "name": "A cada 1 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT trajeto_id, medico_id, especialidade, unidade, janela, destino_lat, destino_lng, primeira_consulta_em, eta_min, folga_min, estado, ultimo_calc_lat, ultimo_calc_lng FROM ops.trajeto_medico WHERE status = 'a_caminho' AND proxima_checagem_em <= now()",
+        "options": {}
+      },
+      "id": "939e419c-f198-5e4b-aee7-eed6cbbc5488",
+      "name": "Trajetos com checagem vencida",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        240,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "gps",
+        "key": "=gps:{{ $json.medico_id }}",
+        "keyType": "string",
+        "options": {}
+      },
+      "id": "dd51827e-3d09-50db-9e60-7da3b079c730",
+      "name": "Última posição (Redis)",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        480,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Decide se vale chamar o Google Routes agora (economia de chamadas).\nconst t = $json;                                   // trajeto aberto + posição do Redis\nconst gps = t.gps ? JSON.parse(t.gps) : null;      // {lat, lng, em}\nconst agora = Date.now();\nconst semSinalMin = gps ? (agora - new Date(gps.em)) / 60000 : 999;\nconst rad = x => x * Math.PI / 180;\nconst distM = (a, b) => {                           // distância aproximada em metros (haversine)\n  if (!a || !b || a.lat == null || b.lat == null) return Infinity;\n  const R = 6371000, dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);\n  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;\n  return 2 * R * Math.asin(Math.sqrt(h));\n};\nconst ultimo = { lat: t.ultimo_calc_lat, lng: t.ultimo_calc_lng };\nconst parado = gps && distM(gps, ultimo) < 200;     // não andou 200 m desde o último cálculo\nconst folgaAnterior = t.folga_min == null ? 0 : t.folga_min;\nreturn { json: {\n  ...t, gps,\n  sem_sinal_min: Math.round(semSinalMin),\n  chamar_google: !!gps && semSinalMin < 10 && !parado,\n  // acima de 30 min de folga não precisa de trânsito em tempo real (SKU Essentials, metade do preço)\n  routing: folgaAnterior > 30 ? 'TRAFFIC_UNAWARE' : 'TRAFFIC_AWARE',\n  correlation_id: t.correlation_id || ('MED-' + t.medico_id + '-' + t.trajeto_id)\n} };"
+      },
+      "id": "39704391-0239-57a9-957f-a5ccec3225be",
+      "name": "Decidir chamada",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        480,
-        0
+        720,
+        160
       ]
     },
     {
       "parameters": {
         "conditions": {
-          "number": [
+          "boolean": [
             {
-              "value1": "={{ $json.sem_sinal_min }}",
-              "operation": "largerEqual",
-              "value2": 10
+              "value1": "={{ $json.chamar_google }}",
+              "operation": "equal",
+              "value2": true
             }
           ]
         }
       },
-      "id": "72e39a32-cb09-505e-b981-f2a5e9e02106",
-      "name": "Incidente? (≥ 10 min sem sinal)",
+      "id": "cfa5f278-3253-56e0-a88b-6aba15e50597",
+      "name": "Chamar o Google agora?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        720,
-        0
+        960,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://routes.googleapis.com/directions/v2:computeRoutes",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ origin: { location: { latLng: { latitude: $json.gps.lat, longitude: $json.gps.lng } } }, destination: { location: { latLng: { latitude: $json.destino_lat, longitude: $json.destino_lng } } }, travelMode: 'DRIVE', routingPreference: $json.routing }) }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Goog-Api-Key",
+              "value": "={{ $env.GOOGLE_MAPS_API_KEY }}"
+            },
+            {
+              "name": "X-Goog-FieldMask",
+              "value": "routes.duration,routes.distanceMeters"
+            }
+          ]
+        }
+      },
+      "id": "a90e0529-047c-5c73-8f3a-c5f9fa0d4bdc",
+      "name": "Google Routes · computeRoutes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Junta o resultado do Google (ou o ETA anterior) e calcula folga, estado e próxima checagem.\nconst base = $('Decidir chamada').item.json;\nconst rota = ($json.routes || [])[0];\nconst etaMin = rota ? Math.ceil(parseInt(String(rota.duration).replace('s', ''), 10) / 60) : (base.eta_min ?? null);\nconst minAte1a = (new Date(base.primeira_consulta_em) - Date.now()) / 60000;\nconst MARGEM = 15;                                         // margem de segurança\nconst folga = etaMin == null ? null : Math.round(minAte1a - etaMin - MARGEM);\nlet estado = 'no_horario';\nif (base.sem_sinal_min >= 10) estado = 'incidente';\nelse if (folga != null && folga < 0) estado = 'atraso';\n// intervalo adaptativo: 1 min com folga menor que 15 min, senão 5 min\nconst proxMin = folga != null && folga < 15 ? 1 : 5;\nreturn { json: {\n  correlation_id: base.correlation_id, trajeto_id: base.trajeto_id, medico_id: base.medico_id,\n  especialidade: base.especialidade, unidade: base.unidade, janela: base.janela,\n  eta_min: etaMin, folga_min: folga, atraso_previsto_min: folga != null && folga < 0 ? -folga : 0,\n  estado, estado_anterior: base.estado || 'no_horario', mudou: estado !== (base.estado || 'no_horario'),\n  chamou_google: !!rota, routing: base.routing, proxima_checagem_min: proxMin,\n  lat: base.gps ? base.gps.lat : null, lng: base.gps ? base.gps.lng : null\n} };"
+      },
+      "id": "8d2e4e54-a023-568e-9a53-e6d4dc6bf54d",
+      "name": "Calcular folga e próxima checagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE ops.trajeto_medico SET eta_min = $2, folga_min = $3, estado = $4, ultimo_calc_lat = COALESCE($5, ultimo_calc_lat), ultimo_calc_lng = COALESCE($6, ultimo_calc_lng), proxima_checagem_em = now() + make_interval(mins => $7) WHERE trajeto_id = $1",
+        "options": {
+          "queryReplacement": "={{ [$json.trajeto_id, $json.eta_min, $json.folga_min, $json.estado, $json.chamou_google ? $json.lat : null, $json.chamou_google ? $json.lng : null, $json.proxima_checagem_min] }}"
+        }
+      },
+      "id": "bd2a4121-af4f-56ec-b5b4-2b530edad7b8",
+      "name": "Atualizar trajeto",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1680,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('Calcular folga e próxima checagem').item.json.mudou }}",
+              "operation": "equal",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "2ea414b7-ed96-5a8f-a2f3-7e6551e06c30",
+      "name": "Estado mudou?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $('Calcular folga e próxima checagem').item.json.estado }}",
+              "operation": "equal",
+              "value2": "incidente"
+            }
+          ]
+        }
+      },
+      "id": "55acc1b5-79ec-59d1-bbeb-017465bcb320",
+      "name": "Incidente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2160,
+        80
       ]
     },
     {
@@ -93,37 +281,16 @@
         "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-cobertura",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ correlation_id: $json.correlation_id, medico_id: $json.medico_id, especialidade: $json.especialidade, unidade: $json.unidade, motivo: \"incidente_percurso\" }) }}",
+        "jsonBody": "={{ JSON.stringify({ correlation_id: $('Calcular folga e próxima checagem').item.json.correlation_id, medico_id: $('Calcular folga e próxima checagem').item.json.medico_id, especialidade: $('Calcular folga e próxima checagem').item.json.especialidade, unidade: $('Calcular folga e próxima checagem').item.json.unidade, motivo: 'incidente_percurso' }) }}",
         "options": {}
       },
-      "id": "f03740e3-2975-5bda-8866-f685d99328d9",
+      "id": "25e3d2fa-f579-500d-ab24-86475bd48a52",
       "name": "Acionar cobertura (14)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        960,
-        -80
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "number": [
-            {
-              "value1": "={{ $json.margem_min }}",
-              "operation": "smaller",
-              "value2": 0
-            }
-          ]
-        }
-      },
-      "id": "9d74e553-170d-535b-ade9-f5389fa6818f",
-      "name": "Atrasa? (margem < 0)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [
-        960,
-        100
+        2400,
+        -20
       ]
     },
     {
@@ -132,16 +299,34 @@
         "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-aviso-central",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ correlation_id: $json.correlation_id, medico_id: $json.medico_id, atraso_previsto_min: -$json.margem_min, canal: [\"app\",\"whatsapp\"] }) }}",
+        "jsonBody": "={{ JSON.stringify({ correlation_id: $('Calcular folga e próxima checagem').item.json.correlation_id, medico_id: $('Calcular folga e próxima checagem').item.json.medico_id, estado: $('Calcular folga e próxima checagem').item.json.estado, atraso_previsto_min: $('Calcular folga e próxima checagem').item.json.atraso_previsto_min }) }}",
         "options": {}
       },
-      "id": "000b1d89-b6cc-555d-b56e-a737ca56da61",
-      "name": "Aviso à central e recepção",
+      "id": "c53173ba-f301-5fef-8899-05f1e235b178",
+      "name": "Avisar central e recepção",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1200,
-        20
+        2400,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-fila-eta",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ correlation_id: $('Calcular folga e próxima checagem').item.json.correlation_id, medico_id: $('Calcular folga e próxima checagem').item.json.medico_id, especialidade: $('Calcular folga e próxima checagem').item.json.especialidade, atraso_chegada_min: $('Calcular folga e próxima checagem').item.json.atraso_previsto_min }) }}",
+        "options": {}
+      },
+      "id": "85ca4347-17d9-5bf3-adea-84d33b443033",
+      "name": "Informar a fila digital (13)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        300
       ]
     },
     {
@@ -149,80 +334,209 @@
         "operation": "executeQuery",
         "query": "INSERT INTO audit.evento_integracao (correlation_id, workflow, evento, payload) VALUES ($1,$2,$3,$4::jsonb)",
         "options": {
-          "queryReplacement": "={{ [$json.correlation_id, '12_trajeto_medico', 'trajeto_monitorado', JSON.stringify($json)] }}"
+          "queryReplacement": "={{ [$('Calcular folga e próxima checagem').item.json.correlation_id, '12_trajeto_medico', 'trajeto_' + $('Calcular folga e próxima checagem').item.json.estado, JSON.stringify({ trajeto_id: $('Calcular folga e próxima checagem').item.json.trajeto_id, janela: $('Calcular folga e próxima checagem').item.json.janela, eta_min: $('Calcular folga e próxima checagem').item.json.eta_min, folga_min: $('Calcular folga e próxima checagem').item.json.folga_min, chamou_google: $('Calcular folga e próxima checagem').item.json.chamou_google, routing: $('Calcular folga e próxima checagem').item.json.routing })] }}"
         }
       },
-      "id": "dfdc4759-ce23-5b81-94ee-e39a20caf4c8",
+      "id": "bacc80bf-e23c-5dd6-9e4a-5b765b2859b8",
       "name": "Gravar evento",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1200,
-        200
+        2160,
+        300
       ]
     },
     {
       "parameters": {
-        "content": "Sem sinal por 10 min = possível incidente. O protocolo prioriza o contato com a pessoa; a cobertura da agenda segue em paralelo (workflow 14).",
-        "height": 140,
-        "width": 360
+        "operation": "executeQuery",
+        "query": "INSERT INTO audit.evento_integracao (correlation_id, workflow, evento, payload) VALUES ($1,$2,$3,$4::jsonb)",
+        "options": {
+          "queryReplacement": "={{ [$('Validar check-in').item.json.correlation_id, '12_trajeto_medico', 'trajeto_' + $('Validar check-in').item.json.evento, JSON.stringify({ janela: $('Validar check-in').item.json.janela, unidade: $('Validar check-in').item.json.unidade })] }}"
+        }
       },
-      "id": "75ed4be9-797a-589f-a0ab-82034a6e5550",
+      "id": "7ec547a8-9b7a-5385-9f58-3bdd4848529e",
+      "name": "Gravar abertura/fechamento",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        720,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Intervalo adaptativo: tique de 1 min, mas cada trajeto só é recalculado quando vence a próxima checagem (5 min com folga, 1 min com folga < 15 min). Acima de 30 min de folga usa TRAFFIC_UNAWARE (SKU Essentials). GPS parado (< 200 m) reaproveita o ETA. Posição bruta só no Redis, com TTL de 6 h. Até 3 trajetos por dia (ida, retorno do almoço e 2º local). Variáveis: GOOGLE_MAPS_API_KEY, N8N_BASE_URL.",
+        "height": 200,
+        "width": 440
+      },
+      "id": "1c9707c4-20e6-584e-ad71-b8331a9d2d4e",
       "name": "Nota",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        720,
-        -200
+        700,
+        -520
       ]
     }
   ],
   "connections": {
-    "A cada 60 s": {
+    "Check-in de saída ou chegada (app do médico)": {
       "main": [
         [
           {
-            "node": "Médicos a caminho",
+            "node": "Validar check-in",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Médicos a caminho": {
+    "Validar check-in": {
       "main": [
         [
           {
-            "node": "Calcular margem",
+            "node": "Abrir ou fechar trajeto",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check-in GPS (app do médico)": {
+    "Abrir ou fechar trajeto": {
       "main": [
         [
           {
-            "node": "Calcular margem",
+            "node": "Gravar abertura/fechamento",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Calcular margem": {
+    "Ping GPS (app do médico)": {
       "main": [
         [
           {
-            "node": "Incidente? (≥ 10 min sem sinal)",
+            "node": "Guardar posição no Redis (TTL 6 h)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Incidente? (≥ 10 min sem sinal)": {
+    "A cada 1 min": {
+      "main": [
+        [
+          {
+            "node": "Trajetos com checagem vencida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trajetos com checagem vencida": {
+      "main": [
+        [
+          {
+            "node": "Última posição (Redis)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Última posição (Redis)": {
+      "main": [
+        [
+          {
+            "node": "Decidir chamada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decidir chamada": {
+      "main": [
+        [
+          {
+            "node": "Chamar o Google agora?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chamar o Google agora?": {
+      "main": [
+        [
+          {
+            "node": "Google Routes · computeRoutes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calcular folga e próxima checagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Routes · computeRoutes": {
+      "main": [
+        [
+          {
+            "node": "Calcular folga e próxima checagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular folga e próxima checagem": {
+      "main": [
+        [
+          {
+            "node": "Atualizar trajeto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar trajeto": {
+      "main": [
+        [
+          {
+            "node": "Estado mudou?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estado mudou?": {
+      "main": [
+        [
+          {
+            "node": "Incidente?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gravar evento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Incidente?": {
       "main": [
         [
           {
@@ -233,47 +547,12 @@
         ],
         [
           {
-            "node": "Atrasa? (margem < 0)",
+            "node": "Avisar central e recepção",
             "type": "main",
             "index": 0
-          }
-        ]
-      ]
-    },
-    "Atrasa? (margem < 0)": {
-      "main": [
-        [
+          },
           {
-            "node": "Aviso à central e recepção",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Gravar evento",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Aviso à central e recepção": {
-      "main": [
-        [
-          {
-            "node": "Gravar evento",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Acionar cobertura (14)": {
-      "main": [
-        [
-          {
-            "node": "Gravar evento",
+            "node": "Informar a fila digital (13)",
             "type": "main",
             "index": 0
           }
@@ -294,7 +573,7 @@
     }
   ],
   "meta": {
-    "descricao": "Monitora o deslocamento de cada médico escalado e avisa a central ou aciona a cobertura (14).",
-    "aviso": "Simulação do MVP. Vincule suas credenciais (PostgreSQL) e defina a variável N8N_BASE_URL. Sem CPF nem dados clínicos."
+    "descricao": "Abre até 3 trajetos por dia por médico, calcula o ETA no Google Routes com intervalo adaptativo e avisa central, fila digital (13) ou cobertura (14) só quando o estado muda.",
+    "aviso": "Simulação. Vincule as credenciais (PostgreSQL, Redis) e defina as variáveis indicadas antes de ativar. Sem CPF nem dados clínicos."
   }
 }

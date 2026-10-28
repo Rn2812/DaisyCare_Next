@@ -1,0 +1,79 @@
+FORMULAS DAX FINAIS — ANALISE DA JORNADA DO PACIENTE (PÁGINA 3)
+
+TABELAS BASE
+'dataset_01_agendamentos_conversao_200k'
+'dataset_02_experiencia_qualidade_200k'
+
+1. Taxa_Comparecimento
+Taxa_Comparecimento =
+DIVIDE(
+    [Qtd_Agendamentos] - [Qtd_NoShow],
+    [Qtd_Agendamentos],
+    0
+)
+
+2. Qtd_Confirmou_24h
+Qtd_Confirmou_24h =
+SUM('dataset_01_agendamentos_conversao_200k'[confirmou_24h])
+
+3. Qtd_Confirmou_4h
+Qtd_Confirmou_4h =
+SUM('dataset_01_agendamentos_conversao_200k'[confirmou_4h])
+
+4. Taxa_Confirmacao_24h
+Taxa_Confirmacao_24h =
+DIVIDE([Qtd_Confirmou_24h], [Qtd_Agendamentos], 0)
+
+5. Qtd_Realizados
+Qtd_Realizados =
+CALCULATE(
+    COUNT('dataset_01_agendamentos_conversao_200k'[id_agendamento]),
+    'dataset_01_agendamentos_conversao_200k'[target_conversao] = 1
+)
+
+6. Eficiencia_Jornada
+Eficiencia_Jornada =
+DIVIDE([Qtd_Realizados], [Qtd_Confirmou_24h], 0)
+
+7. Confirmou_24h_Label (coluna calculada)
+Confirmou_24h_Label =
+SWITCH(
+    TRUE(),
+    'dataset_01_agendamentos_conversao_200k'[confirmou_24h] = 1, "Confirmou",
+    'dataset_01_agendamentos_conversao_200k'[confirmou_24h] = 0, "Não Confirmou",
+    "Sem Informação"
+)
+
+8. Ordem_Confirmacao_24h (coluna calculada)
+Ordem_Confirmacao_24h =
+SWITCH(
+    'dataset_01_agendamentos_conversao_200k'[Confirmou_24h_Label],
+    "Não Confirmou", 1,
+    "Confirmou", 2,
+    "Sem Informação", 3,
+    BLANK()
+)
+
+GRAFICOS FINAIS
+A. Funil da Jornada do Paciente
+- Valores: Qtd_Agendamentos, Qtd_Confirmou_24h, Qtd_Confirmou_4h, Qtd_Realizados
+
+B. Confirmação 24h vs Comparecimento
+- Eixo X: Confirmou_24h_Label
+- Valores: Qtd_Agendamentos, Qtd_Realizados
+- Filtro: remover "Sem Informação"
+
+C. Especialidades com Maior Risco de No-Show
+- Eixo Y: especialidade
+- Valor: Taxa_NoShow
+
+D. Risco de No-Show por Faixa Etária
+- Eixo Y: faixa_etaria
+- Valor: Taxa_NoShow
+
+KPIS FINAIS
+- Taxa_Confirmacao_24h
+- Taxa_Comparecimento
+- Taxa_Conversao
+- Taxa_Remarcacao
+- Eficiencia_Jornada

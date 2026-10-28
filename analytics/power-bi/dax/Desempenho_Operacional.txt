@@ -1,0 +1,74 @@
+FORMULAS DAX FINAIS — DESEMPENHO OPERACIONAL (PÁGINA 1)
+
+TABELA BASE
+'dataset_01_agendamentos_conversao_200k'
+
+1. Qtd_Agendamentos
+Qtd_Agendamentos =
+COUNT('dataset_01_agendamentos_conversao_200k'[id_agendamento])
+
+2. Qtd_Convertidos
+Qtd_Convertidos =
+SUM('dataset_01_agendamentos_conversao_200k'[target_conversao])
+
+3. Qtd_NoShow
+Qtd_NoShow =
+SUM('dataset_01_agendamentos_conversao_200k'[no_show])
+
+4. Qtd_Cancelados
+Qtd_Cancelados =
+SUM('dataset_01_agendamentos_conversao_200k'[cancelado])
+
+5. Qtd_Remarcados
+Qtd_Remarcados =
+SUM('dataset_01_agendamentos_conversao_200k'[remarcado])
+
+6. Taxa_Conversao
+Taxa_Conversao =
+DIVIDE([Qtd_Convertidos], [Qtd_Agendamentos], 0)
+
+7. Taxa_NoShow
+Taxa_NoShow =
+DIVIDE([Qtd_NoShow], [Qtd_Agendamentos], 0)
+
+8. Taxa_Cancelamento
+Taxa_Cancelamento =
+DIVIDE([Qtd_Cancelados], [Qtd_Agendamentos], 0)
+
+9. Impacto_NoShow
+Impacto_NoShow =
+CALCULATE(
+    SUM('dataset_01_agendamentos_conversao_200k'[ticket_estimado]),
+    'dataset_01_agendamentos_conversao_200k'[no_show] = 1
+)
+
+10. Perda_Financeira_Especialidade
+Perda_Financeira_Especialidade =
+CALCULATE(
+    SUM('dataset_01_agendamentos_conversao_200k'[ticket_estimado]),
+    'dataset_01_agendamentos_conversao_200k'[no_show] = 1
+)
+
+GRAFICOS FINAIS
+A. Evolução dos Agendamentos
+- Eixo X: Calendario[AnoMes]
+- Valor: Qtd_Agendamentos
+
+B. Conversão vs No-Show no Tempo
+- Eixo X: Calendario[AnoMes]
+- Valores: Taxa_Conversao, Taxa_NoShow
+
+C. Distribuição dos Agendamentos
+- Eixo Y: status_agendamento
+- Valor: Qtd_Agendamentos
+
+D. Perda por Especialidade
+- Eixo Y: especialidade
+- Eixo X: Perda_Financeira_Especialidade
+
+KPIS FINAIS
+- Qtd_Agendamentos
+- Taxa_Conversao
+- Taxa_NoShow
+- Impacto_NoShow
+- Satisfacao_Media_Atendimento (se já existir no modelo)

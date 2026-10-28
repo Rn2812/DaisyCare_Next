@@ -1,6 +1,6 @@
 """Suíte de regressão do DaisyCare.
 Uso:  pip install playwright && playwright install chromium
-      python regressao.py  ../DaisyCare_App_v40_52_Evolucao.html
+      python testes/regressao.py app/DaisyCare_App_v40_93_Voz_Natural.html
 Sobe um servidor local (para a pasta falas/ funcionar), roda as checagens e imprime OK/FALHA."""
 import sys,os,threading,http.server,socketserver,functools
 from playwright.sync_api import sync_playwright
@@ -16,7 +16,9 @@ def pg2_voz(b,port,name):
     q=b.new_page(viewport={'width':1300,'height':900})
     q.add_init_script("localStorage.setItem('daisycare_prefs_v52','{\"seen\":1}');window.__pl=[];const P=HTMLMediaElement.prototype.play;HTMLMediaElement.prototype.play=function(){window.__pl.push(this.src||'');return P.apply(this,arguments)}")
     q.goto(f'http://127.0.0.1:{port}/{name}');q.wait_for_timeout(3000);q.evaluate("showPage('appchat')");q.evaluate("window.__DAISY_OFFICIAL_VOICE_4035.active=true")
-    q.fill('#appInput','1');q.evaluate("sendChat('app')");q.wait_for_timeout(800)
+    # v40.93: a opção 1 virou menu de ação (só texto); a voz é conferida na fila (2) e na agenda (3)
+    q.fill('#appInput','2');q.evaluate("sendChat('app')");q.wait_for_timeout(800)
+    q.fill('#appInput','menu');q.evaluate("sendChat('app')");q.wait_for_timeout(800)
     q.fill('#appInput','3');q.evaluate("sendChat('app')");q.wait_for_timeout(800)
     t=' '.join(q.evaluate('window.__pl'));q.close()
     return t.count('falas/auto/')>=2
@@ -88,8 +90,8 @@ with sync_playwright() as p:
     chk('BI: ≥ 6 gráficos',pg.evaluate("document.querySelectorAll('#bi svg').length")>=6)
     chk('BI: painel de exceções',pg.evaluate("!!document.querySelector('#biAlerts')"))
     pg.evaluate("showPage('rules')");pg.wait_for_timeout(2500)
-    chk('Regras: 30 cartões',pg.evaluate("document.querySelectorAll('#rulesGrid .rc').length")==30)
-    chk('Regras: evidência em todas',pg.evaluate("document.querySelectorAll('#rulesGrid .ev').length")==30)
+    chk('Regras: 36 cartões',pg.evaluate("document.querySelectorAll('#rulesGrid .rc').length")==36)
+    chk('Regras: evidência em todas',pg.evaluate("document.querySelectorAll('#rulesGrid .ev').length")==36)
     pg.evaluate("showPage('whatsapp')");pg.wait_for_timeout(500)
     h0=pg.evaluate("document.querySelector('.wa-chat-card').getBoundingClientRect().height")
     for t in ['1','2','3','4','5','6']: send('wa',t)
@@ -101,7 +103,7 @@ with sync_playwright() as p:
     pg.evaluate("showPage('workflows')");pg.wait_for_timeout(9000)
     chk('Fluxo médico transparente (nós com fundo rgba)',pg.evaluate("(()=>{const r=document.querySelector('#wf2 .nd rect');return !!r&&/rgba/.test(r.getAttribute('fill'))})()"))
     chk('Modelo ouro: bloco abaixo do fluxo médico',pg.evaluate("(()=>{const a=document.querySelector('#wf2'),b=document.querySelector('#wf3');return !!b&&a.getBoundingClientRect().top<b.getBoundingClientRect().top})()"))
-    chk('Modelo ouro: 5 workflows novos e 5 JSON',pg.evaluate("document.querySelectorAll('#wf3 .n.new').length")==5 and pg.evaluate("document.querySelectorAll('#wf3 [data-dl]').length")==5)
+    chk('Modelo ouro: especificação dos workflows 12 a 17 com 6 JSON',pg.evaluate("document.querySelectorAll('#wf3 [data-dl]').length")==6 and pg.evaluate("(window.DAISY_N8N||[]).length")==6)
     chk('Topo: marca DAISYCARE · Mater Dei · Assistente digital',pg.evaluate("(()=>{const t=document.querySelector('.dc-brand');return !!t&&/daisycare/i.test(t.innerText)&&/Assistente digital/i.test(t.innerText)&&!/v40/i.test(t.innerText)})()"))
     chk('Topo: barra fixa, sem selo MVP simulado e sem kicker',pg.evaluate("(()=>{const h=document.querySelector('header.top');return getComputedStyle(h).position==='fixed'&&!/MVP simulado/i.test(h.innerText)&&getComputedStyle(h.querySelector('.kicker')||document.body).display!=='block'||!h.querySelector('.kicker:not([style*=none])')})()"))
     pg.evaluate("window.scrollTo(0,800)");pg.wait_for_timeout(200)

@@ -1,0 +1,103 @@
+FORMULAS DAX FINAIS — AUTOMACAO & IA (SMART QUEUE) (PÁGINA 4)
+
+TABELA BASE
+'dataset_03_logs_daisy_n8n_IA_logistica_200k'
+
+1. Qtd_Eventos
+Qtd_Eventos =
+COUNTROWS('dataset_03_logs_daisy_n8n_IA_logistica_200k')
+
+2. Taxa_Sucesso_IA
+Taxa_Sucesso_IA =
+DIVIDE(
+    CALCULATE(
+        COUNTROWS('dataset_03_logs_daisy_n8n_IA_logistica_200k'),
+        'dataset_03_logs_daisy_n8n_IA_logistica_200k'[status_execucao] = "sucesso"
+    ),
+    [Qtd_Eventos],
+    0
+)
+
+3. Taxa_Erro_IA
+Taxa_Erro_IA =
+DIVIDE(
+    CALCULATE(
+        COUNTROWS('dataset_03_logs_daisy_n8n_IA_logistica_200k'),
+        'dataset_03_logs_daisy_n8n_IA_logistica_200k'[status_execucao] = "erro"
+    ),
+    [Qtd_Eventos],
+    0
+)
+
+4. Taxa_Alerta
+Taxa_Alerta =
+DIVIDE(
+    CALCULATE(
+        COUNTROWS('dataset_03_logs_daisy_n8n_IA_logistica_200k'),
+        'dataset_03_logs_daisy_n8n_IA_logistica_200k'[status_execucao] = "alerta"
+    ),
+    [Qtd_Eventos],
+    0
+)
+
+5. Latencia_Media
+Latencia_Media =
+AVERAGE('dataset_03_logs_daisy_n8n_IA_logistica_200k'[latencia_ms])
+
+6. Tempo_Resposta_Medio
+Tempo_Resposta_Medio =
+AVERAGE('dataset_03_logs_daisy_n8n_IA_logistica_200k'[tempo_resposta_convite_min])
+
+7. Etapa_Pipeline_Ordenada (coluna calculada)
+Etapa_Pipeline_Ordenada =
+SWITCH(
+    TRUE(),
+    'dataset_03_logs_daisy_n8n_IA_logistica_200k'[evento] = "vaga_liberada", "1. Vaga Liberada",
+    'dataset_03_logs_daisy_n8n_IA_logistica_200k'[evento] = "smart_queue_acionada", "2. Smart Queue",
+    'dataset_03_logs_daisy_n8n_IA_logistica_200k'[evento] = "pacientes_elegiveis", "3. Pacientes Elegíveis",
+    'dataset_03_logs_daisy_n8n_IA_logistica_200k'[evento] = "pacientes_aptos", "4. Pacientes Aptos",
+    'dataset_03_logs_daisy_n8n_IA_logistica_200k'[evento] = "convite_enviado", "5. Convite Enviado",
+    'dataset_03_logs_daisy_n8n_IA_logistica_200k'[evento] = "convite_aceito", "6. Convite Aceito",
+    'dataset_03_logs_daisy_n8n_IA_logistica_200k'[evento] = "encaixe_confirmado", "7. Encaixe Confirmado",
+    BLANK()
+)
+
+8. Ordem_Pipeline (coluna calculada)
+Ordem_Pipeline =
+SWITCH(
+    'dataset_03_logs_daisy_n8n_IA_logistica_200k'[evento],
+    "vaga_liberada", 1,
+    "smart_queue_acionada", 2,
+    "pacientes_elegiveis", 3,
+    "pacientes_aptos", 4,
+    "convite_enviado", 5,
+    "convite_aceito", 6,
+    "encaixe_confirmado", 7,
+    BLANK()
+)
+
+GRAFICOS FINAIS
+A. Status de Execução da IA
+- Eixo X: status_execucao
+- Valor: Qtd_Eventos
+
+B. Pipeline de Execução da Smart Queue
+- Eixo X: Etapa_Pipeline_Ordenada
+- Valor: Qtd_Eventos
+- Ordenar por: Ordem_Pipeline
+
+C. Latência ao Longo do Tempo
+- Eixo X: data_evento
+- Valor: Latencia_Media
+
+D. Sucesso vs Erro da IA ao Longo do Tempo
+- Eixo X: data_evento
+- Valores: Taxa_Sucesso_IA, Taxa_Erro_IA
+
+KPIS FINAIS
+- Qtd_Eventos
+- Tempo_Resposta_Medio
+- Latencia_Media
+- Taxa_Sucesso_IA
+- Taxa_Alerta
+- Taxa_Erro_IA
