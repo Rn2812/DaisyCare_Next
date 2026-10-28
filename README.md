@@ -6,7 +6,7 @@
 
 Projeto do Challenge FIAP × Hospital Mater Dei (Data Science, 2026), premiado no **FIAP NEXT 2026**. Ideias, regras de negócio, automações, imagens, aplicação, testes e implantação: **Rodrigo Nillo**. A equipe Data Bridge contribuiu com o nome Daisy e com discussões sobre o desenvolvimento.
 
-**▶ [Abrir a demo no navegador](https://rn2812.github.io/DaisyCare_Next/)** · [Pitch em PDF](docs/pitch/DaisyCare_Pitch_FIAP_NEXT_2026.pdf) · [Notebook de ML](analytics/ml/DaisyCare_ML_previsao_comparecimento.ipynb)
+**▶ [Abrir a demo no navegador](https://rn2812.github.io/DaisyCare_Next/)** · [Apresentação Mater Dei e FIAP NEXT](https://rn2812.github.io/DaisyCare_Next/docs/apresentacao/DaisyCare_Apresentacao_MaterDei.html) · [Pitch em PDF](docs/pitch/DaisyCare_Pitch_FIAP_NEXT_2026.pdf) · [Notebook de ML](analytics/ml/DaisyCare_ML_previsao_comparecimento.ipynb)
 
 > Todos os dados são fictícios ou sintéticos. Não há dado real de paciente, CPF ou conversa gravada.
 
@@ -85,7 +85,7 @@ fonte/          código-fonte do build (base, módulos JS, patches)
 testes/         suítes Playwright (testes/historico: scripts das versões 80 a 91)
 n8n/            workflows 12 a 17 para importar no n8n
 analytics/      notebook de Machine Learning, bases sintéticas e medidas DAX
-docs/           pitch em PDF, manual dos workflows n8n, telas e roteiros de voz
+docs/           apresentação interativa, pitch em PDF, manual dos workflows n8n, telas e roteiros de voz
 ```
 
 ## Telas
@@ -98,7 +98,9 @@ docs/           pitch em PDF, manual dos workflows n8n, telas e roteiros de voz
 | **Smart Queue** | **Acompanhamento médico** |
 | ![](docs/imagens/06_smart_queue.png) | ![](docs/imagens/07_monitor_medico.png) |
 
-Apresentação completa: [docs/pitch/DaisyCare_Pitch_FIAP_NEXT_2026.pdf](docs/pitch/DaisyCare_Pitch_FIAP_NEXT_2026.pdf)
+Apresentações:
+- [Apresentação interativa](docs/apresentacao/DaisyCare_Apresentacao_MaterDei.html) feita para o Hospital Mater Dei, os professores e o FIAP NEXT 2026. A página de indicadores (§ 10A) usa os números da base de 12 meses.
+- [Pitch FIAP NEXT 2026 em PDF](docs/pitch/DaisyCare_Pitch_FIAP_NEXT_2026.pdf)
 
 ## Premiação
 
