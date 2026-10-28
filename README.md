@@ -4,7 +4,7 @@
 
 > 🥇 **Medalha de ouro no FIAP NEXT 2026**: o DaisyCare foi premiado como a melhor solução entre 10 projetos da turma de Data Science.
 
-Projeto em equipe (Data Bridge) do Challenge FIAP × Hospital Mater Dei (Data Science, 2026), premiado no **FIAP NEXT 2026**.
+Projeto do Challenge FIAP × Hospital Mater Dei (Data Science, 2026), premiado no **FIAP NEXT 2026**. Ideias, regras de negócio, automações, imagens, aplicação, testes e implantação: **Rodrigo Nillo**. A equipe Data Bridge contribuiu com o nome Daisy e com discussões sobre o desenvolvimento.
 
 **▶ [Abrir a demo no navegador](https://rn2812.github.io/DaisyCare_Next/)** · [Pitch em PDF](docs/pitch/DaisyCare_Pitch_FIAP_NEXT_2026.pdf) · [Notebook de ML](analytics/ml/DaisyCare_ML_previsao_comparecimento.ipynb)
 
@@ -104,7 +104,9 @@ Apresentação completa: [docs/pitch/DaisyCare_Pitch_FIAP_NEXT_2026.pdf](docs/pi
 
 O DaisyCare recebeu a **medalha de ouro no FIAP NEXT 2026**, como a melhor solução entre os 10 projetos da turma de Data Science.
 
-<img src="docs/imagens/premiacao_fiap_next_2026.jpg" alt="Equipe do DaisyCare com os shapes da premiação no FIAP NEXT 2026" width="420">
+<img src="docs/imagens/premiacao_fiap_next_2026.jpg" alt="Rodrigo Nillo e a equipe Data Bridge com os shapes da premiação no FIAP NEXT 2026" width="420">
+
+Rodrigo Nillo (desenvolvimento da solução) e a equipe Data Bridge no FIAP NEXT 2026.
 
 ## Limitações e próximos passos
 
