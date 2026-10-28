@@ -1,5 +1,8 @@
 # Histórico de versões
 
+## FIAP NEXT 2026
+- 🥇 Medalha de ouro: melhor solução entre 10 projetos.
+
 ## v40.93 · chat e WhatsApp
 - Opção 1 (Confirmar consulta) mostra a consulta e oferece: 1 confirmar presença, 2 cancelar, 3 reagendar.
 - Cancelamento de consultas, exames e procedimentos: `CANCELAR` ou frases como "cancelar a endoscopia". A Daisy pede confirmação, gera protocolo `DC-CAN` e libera o horário para a fila de espera.

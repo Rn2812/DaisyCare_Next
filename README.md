@@ -2,7 +2,9 @@
 
 **Assistente virtual que reduz faltas e reaproveita vagas na jornada do paciente.** A Daisy confirma, cancela e reagenda consultas pelo app e pelo WhatsApp, por texto e voz. Cada horário liberado vai para uma fila de encaixe, e cada evento chega ao Power BI.
 
-Projeto do Challenge FIAP × Hospital Mater Dei (Data Science, 2026), apresentado no **FIAP NEXT 2026**. Desenvolvimento, dados, automações e testes: **Rodrigo Nillo**.
+> 🥇 **Medalha de ouro no FIAP NEXT 2026**: o DaisyCare foi premiado como a melhor solução entre 10 projetos.
+
+Projeto em equipe (Data Bridge) do Challenge FIAP × Hospital Mater Dei (Data Science, 2026), premiado no **FIAP NEXT 2026**.
 
 **▶ [Abrir a demo no navegador](https://rn2812.github.io/DaisyCare_Next/)** · [Pitch em PDF](docs/pitch/DaisyCare_Pitch_FIAP_NEXT_2026.pdf) · [Notebook de ML](analytics/ml/DaisyCare_ML_previsao_comparecimento.ipynb)
 
@@ -97,6 +99,12 @@ docs/           pitch em PDF, manual dos workflows n8n, telas e roteiros de voz
 | ![](docs/imagens/06_smart_queue.png) | ![](docs/imagens/07_monitor_medico.png) |
 
 Apresentação completa: [docs/pitch/DaisyCare_Pitch_FIAP_NEXT_2026.pdf](docs/pitch/DaisyCare_Pitch_FIAP_NEXT_2026.pdf)
+
+## Premiação
+
+O DaisyCare recebeu a **medalha de ouro no FIAP NEXT 2026**, como a melhor solução entre 10 projetos apresentados.
+
+<img src="docs/imagens/premiacao_fiap_next_2026.jpg" alt="Equipe do DaisyCare com os shapes da premiação no FIAP NEXT 2026" width="420">
 
 ## Limitações e próximos passos
 
