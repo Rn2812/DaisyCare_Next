@@ -1,6 +1,6 @@
 import threading,http.server,socketserver,functools,json,sys
 from playwright.sync_api import sync_playwright
-d='/tmp/claude-0/-home-claude/170423f3-6c13-538a-b17c-4f6e0b4bef5c/scratchpad/pk/DaisyCare'
+import os;d=os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..','app'))
 NAME=sys.argv[1]
 class Q(http.server.SimpleHTTPRequestHandler):
     def log_message(s,*a):pass
@@ -31,13 +31,22 @@ with sync_playwright() as p:
             q.evaluate("(i)=>document.querySelectorAll('#appchat .chat-side-panel button')[i].click()",v)
         q.wait_for_timeout(1800)
         return {'in':str(v),'kind':kind,'txt':last(),'ev':q.evaluate("window.__ev"),'ovl':q.evaluate("window.__ovl")}
-    out=[]
-    def go(*cmds):
-        q.evaluate("showPage('appchat')");q.wait_for_timeout(300)
-        for m in cmds[:-1]:
-            q.fill('#appInput',m);q.evaluate("sendChat('app')");q.wait_for_timeout(400)
-        r=act('say',cmds[-1]);r['in']=' > '.join(cmds);out.append(r)
-    q.evaluate("showPage('appchat')");q.wait_for_timeout(300)
-    r=act('say','menu');q.wait_for_timeout(7000);print('menu',q.evaluate('window.__ev'),q.evaluate('window.__ovl'))
-    reset();q.fill('#appInput','ajuda');q.evaluate("sendChat('app')");q.wait_for_timeout(2500);print('ajuda',last()[:50],q.evaluate('window.__ev'))
-    
+
+    def say(m):
+        q.fill('#appInput',m);q.evaluate("sendChat('app')");q.wait_for_timeout(500)
+        return q.evaluate("(()=>{const b=[...document.querySelectorAll('#appBody .bubble-row:not(.user) .bubble')];return b[b.length-1].innerText})()")
+    def run(title,*cmds):
+        q.evaluate("showPage('appchat')");q.wait_for_timeout(200)
+        r=None
+        for c in cmds:r=say(c)
+        print('###',title,'|',' > '.join(cmds));print(r[:600].replace(chr(10),' / '));print()
+    run('prep','menu','preparo de exames')
+    run('prep sangue','menu','preparo de exames','1')
+    run('proced','menu','meus procedimentos')
+    run('rota','menu','rota e horário de chegada')
+    run('8','menu','8'); run('8b','menu','8','9')
+    run('9','menu','9'); run('10','menu','10')
+    run('tips>8','menu','7','quero','1','8')
+    run('tips>9','menu','7','quero','1','9')
+    run('tips>10','menu','7','quero','1','10')
+    run('tips>prep','menu','7','quero','1','preparo de exames')

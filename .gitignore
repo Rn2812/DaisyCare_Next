@@ -1,2 +1,13 @@
 __pycache__/
 *.pyc
+
+# saída local do build (o app publicado fica em app/)
+fonte/saida/
+
+# credenciais e dados locais nunca vão para o repositório
+.env
+*.env
+*senha*
+*password*
+n8n_data/
+postgres_data/

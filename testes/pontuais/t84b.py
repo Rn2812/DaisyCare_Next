@@ -1,6 +1,6 @@
 import threading,http.server,socketserver,functools,json,sys
 from playwright.sync_api import sync_playwright
-d='/tmp/claude-0/-home-claude/170423f3-6c13-538a-b17c-4f6e0b4bef5c/scratchpad/pk/DaisyCare'
+import os;d=os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..','app'))
 NAME=sys.argv[1]
 class Q(http.server.SimpleHTTPRequestHandler):
     def log_message(s,*a):pass
@@ -32,23 +32,12 @@ with sync_playwright() as p:
         q.wait_for_timeout(1800)
         return {'in':str(v),'kind':kind,'txt':last(),'ev':q.evaluate("window.__ev"),'ovl':q.evaluate("window.__ovl")}
     out=[]
+    def go(*cmds):
+        q.evaluate("showPage('appchat')");q.wait_for_timeout(300)
+        for m in cmds[:-1]:
+            q.fill('#appInput',m);q.evaluate("sendChat('app')");q.wait_for_timeout(400)
+        r=act('say',cmds[-1]);r['in']=' > '.join(cmds);out.append(r)
     q.evaluate("showPage('appchat')");q.wait_for_timeout(300)
-    q.fill('#appInput','menu');q.evaluate("sendChat('app')");q.wait_for_timeout(300)
-    r=act('say','menu');r['in']='menu';out.append(r)
-    for t in ['0','zero','Zero','ouvir as opções']:
-        r=act('say',t);r['in']=t;out.append(r)
-    # zero dentro da nota continua sendo nota
-    q.fill('#appInput','menu');q.evaluate("sendChat('app')");q.wait_for_timeout(300)
-    for t in ['8']:
-        q.fill('#appInput',t);q.evaluate("sendChat('app')");q.wait_for_timeout(300)
-    r=act('say','0');r['in']='8 > 0 (nota)';out.append(r)
-    for o in out:print(o['in'],'|',o['txt'][:90].replace(chr(10),' / '),'|',o['ev'],o['ovl'])
-    # prontuário
-    q.evaluate("showPage('pront')");q.wait_for_timeout(500)
-    q.click('#prEx');q.wait_for_timeout(300);print('LEITURA',q.inner_text('#prRes')[:200].replace(chr(10),' / '))
-    q.click('#prOk');q.wait_for_timeout(300)
-    q.click('[data-pf=dia]');q.wait_for_timeout(300);q.click('[data-at="0"]');q.wait_for_timeout(300)
-    print('ROWS',q.evaluate("document.querySelectorAll('#pront tbody tr').length"))
-    print(q.inner_text('#pront')[-700:].replace(chr(10),' / '))
-    q.screenshot(path='pront.png',full_page=True)
-    print('SCROLLW',q.evaluate("document.documentElement.scrollWidth"))
+    r=act('say','menu');q.wait_for_timeout(7000);print('menu',q.evaluate('window.__ev'),q.evaluate('window.__ovl'))
+    reset();q.fill('#appInput','ajuda');q.evaluate("sendChat('app')");q.wait_for_timeout(2500);print('ajuda',last()[:50],q.evaluate('window.__ev'))
+    

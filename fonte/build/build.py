@@ -186,5 +186,5 @@ window.addEventListener('online',function(){start()});
 """
 assert s.count('</body>')==1
 s=s.replace('</body>',_css+'</body>')
-open(W+'../../app/DaisyCare_App_v40_91_Voz_Natural.html','w',encoding='utf-8').write(s)
+os.makedirs(W+'../saida',exist_ok=True);open(W+'../saida/DaisyCare_App_v40_91_Voz_Natural.html','w',encoding='utf-8').write(s)
 print(len(s)/1e6)

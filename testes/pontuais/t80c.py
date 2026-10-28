@@ -1,6 +1,6 @@
 import threading,http.server,socketserver,functools
 from playwright.sync_api import sync_playwright
-d='/tmp/claude-0/-home-claude/170423f3-6c13-538a-b17c-4f6e0b4bef5c/scratchpad/pk/DaisyCare'
+import os;d=os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..','app'))
 class Q(http.server.SimpleHTTPRequestHandler):
     def log_message(s,*a):pass
 class S(socketserver.ThreadingTCPServer):allow_reuse_address=True

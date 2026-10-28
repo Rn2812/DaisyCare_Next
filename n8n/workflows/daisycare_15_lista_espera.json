@@ -348,6 +348,6 @@
   ],
   "meta": {
     "descricao": "Quando uma vaga é liberada (cancelamento ou cobertura), convida a lista de espera por prioridade e confirma o encaixe.",
-    "aviso": "Simulação do MVP. Vincule suas credenciais (PostgreSQL) e defina a variável N8N_BASE_URL. Sem CPF nem dados clínicos."
+    "aviso": "Simulação. Vincule suas credenciais (PostgreSQL) e defina a variável N8N_BASE_URL. Sem CPF nem dados clínicos."
   }
 }

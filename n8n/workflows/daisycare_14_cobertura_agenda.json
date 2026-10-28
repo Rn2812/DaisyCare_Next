@@ -213,7 +213,7 @@
     },
     {
       "parameters": {
-        "content": "Score = 100 − ETA×1,2 − (carga÷2)×3 + 15 se for a mesma unidade. Regra do MVP; ajuste os pesos com os dados reais.",
+        "content": "Score = 100 − ETA×1,2 − (carga÷2)×3 + 15 se for a mesma unidade. Regra do sistema; ajuste os pesos com os dados reais.",
         "height": 140,
         "width": 360
       },
@@ -378,6 +378,6 @@
   ],
   "meta": {
     "descricao": "Escolhe o profissional de cobertura, convida por app/WhatsApp, espera 5 min e reatribui a agenda; sem aceite, telemedicina ou remarcação por prioridade.",
-    "aviso": "Simulação do MVP. Vincule suas credenciais (PostgreSQL) e defina a variável N8N_BASE_URL. Sem CPF nem dados clínicos."
+    "aviso": "Simulação. Vincule suas credenciais (PostgreSQL) e defina a variável N8N_BASE_URL. Sem CPF nem dados clínicos."
   }
 }

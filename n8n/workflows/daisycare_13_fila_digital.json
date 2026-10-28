@@ -1,0 +1,463 @@
+{
+  "name": "13 · Fila digital e controle dos atendimentos (tempo previsto e avisos)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "daisy-atendimento",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "66651377-152b-54e0-97e0-effd5c4f3602",
+      "name": "Evento de atendimento",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "46e0da97-31f4-5a7f-a3d6-d810ffe51981"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "daisy-fila-eta",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "7e1b6a69-fb80-53c1-a66e-3b7dfdc6c057",
+      "name": "ETA do médico (12)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "61a46b77-03cd-5a8c-9366-6be58079b918"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Normaliza os dois tipos de entrada: evento de atendimento ou ETA do médico (12).\nconst b = $json.body || {};\nconst tipos = ['checkin_paciente', 'inicio', 'fim', 'eta_medico'];\nconst tipo = b.tipo || (b.atraso_chegada_min != null ? 'eta_medico' : null);\nif (!b.medico_id || !tipos.includes(tipo)) throw new Error('payload inválido');\nreturn { json: { medico_id: String(b.medico_id), especialidade: b.especialidade || null, tipo,\n  paciente_token: b.paciente_token || null, duracao_min: b.duracao_min ?? null,\n  atraso_chegada_min: b.atraso_chegada_min ?? null,\n  correlation_id: b.correlation_id || ('FILA-' + b.medico_id + '-' + Date.now().toString(36)) } };"
+      },
+      "id": "a665bfc6-f25b-5336-9145-b05eb7f5dd67",
+      "name": "Normalizar evento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "fila_raw",
+        "key": "=fila:{{ $json.medico_id }}",
+        "keyType": "string",
+        "options": {}
+      },
+      "id": "ba4e00b5-dbd4-5e2a-b2c8-926d615e5806",
+      "name": "Fila do médico (Redis)",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        480,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT (SELECT sla_min FROM ops.sla_especialidade WHERE especialidade = $2) AS sla_min, percentile_cont(0.5) WITHIN GROUP (ORDER BY duracao_min) AS mediana_min, count(*) AS n FROM (SELECT duracao_min FROM ops.consulta WHERE medico_id = $1 AND especialidade = $2 AND duracao_min IS NOT NULL ORDER BY fim_em DESC LIMIT 20) u",
+        "options": {
+          "queryReplacement": "={{ [$json.medico_id, $json.especialidade] }}"
+        }
+      },
+      "id": "3be92ad6-1537-5f18-a4cb-42f70cb7442a",
+      "name": "Mediana das últimas 20 consultas",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        720,
+        100
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Atualiza a fila do médico e prevê a espera de cada paciente.\nconst ev = $('Normalizar evento').item.json;\nconst raw = $('Fila do médico (Redis)').item.json.fila_raw;\nconst est = $json;                                    // mediana das últimas 20 consultas + SLA\nconst fila = raw ? JSON.parse(raw) : { pacientes: [], atual: null, atraso_chegada_min: 0, atraso_acumulado_min: 0 };\nconst agora = Date.now();\nlet fim = false, duracao = null;\n\nif (ev.tipo === 'eta_medico') fila.atraso_chegada_min = Math.max(0, ev.atraso_chegada_min || 0);\nif (ev.tipo === 'checkin_paciente' && ev.paciente_token && !fila.pacientes.some(p => p.token === ev.paciente_token))\n  fila.pacientes.push({ token: ev.paciente_token, checkin_em: new Date().toISOString(), ultimo_aviso_min: null });\nif (ev.tipo === 'inicio') {\n  fila.pacientes = fila.pacientes.filter(p => p.token !== ev.paciente_token);\n  fila.atual = { token: ev.paciente_token, inicio_em: new Date().toISOString() };\n  fila.atraso_chegada_min = 0;                          // médico já está atendendo\n}\nif (ev.tipo === 'fim' && fila.atual) {\n  duracao = ev.duracao_min ?? Math.round((agora - new Date(fila.atual.inicio_em)) / 60000);\n  fila.atraso_acumulado_min = Math.max(0, (fila.atraso_acumulado_min || 0) + duracao - (est.sla_min || duracao));\n  fila.atual = null; fim = true;\n}\n\n// tempo típico: mediana do próprio médico com pelo menos 5 consultas; senão o SLA da especialidade\nconst tipico = est.n >= 5 && est.mediana_min ? Number(est.mediana_min) : Number(est.sla_min || 20);\nconst restanteAtual = fila.atual ? Math.max(0, tipico - (agora - new Date(fila.atual.inicio_em)) / 60000) : 0;\nconst avisos = [];\nfila.pacientes.forEach((p, i) => {\n  const espera = Math.round(restanteAtual + i * tipico + (fila.atraso_chegada_min || 0));\n  const motivo = p.ultimo_aviso_min == null ? 'checkin'\n    : (i === 0 && !p.avisado_proximo) ? 'proximo'\n    : Math.abs(espera - p.ultimo_aviso_min) > 10 ? 'mudou_mais_de_10_min' : null;\n  if (motivo) {\n    avisos.push({ paciente_token: p.token, posicao: i + 1, espera_min: espera, motivo });\n    p.ultimo_aviso_min = espera; if (i === 0) p.avisado_proximo = true;\n  }\n});\nreturn { json: {\n  correlation_id: ev.correlation_id, medico_id: ev.medico_id, especialidade: ev.especialidade, tipo: ev.tipo,\n  fila_json: JSON.stringify(fila), na_fila: fila.pacientes.length, tempo_tipico_min: tipico,\n  atraso_acumulado_min: fila.atraso_acumulado_min || 0, fim, duracao_min: duracao,\n  paciente_token: ev.paciente_token, avisos\n} };"
+      },
+      "id": "db5d10ce-1e05-57a1-b61e-7c5f7d76e453",
+      "name": "Atualizar fila e prever espera",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=fila:{{ $json.medico_id }}",
+        "value": "={{ $json.fila_json }}",
+        "keyType": "string",
+        "expire": true,
+        "ttl": 57600
+      },
+      "id": "0db09604-7488-5937-9ede-4458002d52b5",
+      "name": "Salvar fila (Redis, TTL 16 h)",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Um item por aviso; sem avisos, nada segue.\nreturn $('Atualizar fila e prever espera').all().flatMap(i => (i.json.avisos || []).map(a => ({ json: { correlation_id: i.json.correlation_id, medico_id: i.json.medico_id, ...a } })));"
+      },
+      "id": "bd97be09-eadc-5b79-9aad-ed8125a06e86",
+      "name": "Separar avisos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-agente-aviso",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ correlation_id: $json.correlation_id, tipo: 'espera_prevista', paciente_token: $json.paciente_token, posicao: $json.posicao, espera_min: $json.espera_min, motivo: $json.motivo }) }}",
+        "options": {}
+      },
+      "id": "d40de18c-5552-571d-9b40-ab588264ca37",
+      "name": "Daisy avisa o paciente (10)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('Atualizar fila e prever espera').item.json.fim }}",
+              "operation": "equal",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "d0294905-d85b-5541-ab50-a7588f362abb",
+      "name": "Fim da consulta?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-nps-envio",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ correlation_id: $('Atualizar fila e prever espera').item.json.correlation_id, paciente_token: $('Atualizar fila e prever espera').item.json.paciente_token, medico_id: $('Atualizar fila e prever espera').item.json.medico_id }) }}",
+        "options": {}
+      },
+      "id": "bbed55e9-7499-547e-a39a-3f3cbe7ba697",
+      "name": "Disparar NPS (05A)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $('Atualizar fila e prever espera').item.json.atraso_acumulado_min }}",
+              "operation": "larger",
+              "value2": 30
+            }
+          ]
+        }
+      },
+      "id": "fdf4e609-3eee-5c3a-80a0-81695eff7eb7",
+      "name": "Atraso > 30 min?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-cobertura",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ correlation_id: $('Atualizar fila e prever espera').item.json.correlation_id, medico_id: $('Atualizar fila e prever espera').item.json.medico_id, especialidade: $('Atualizar fila e prever espera').item.json.especialidade, motivo: 'atraso_acumulado' }) }}",
+        "options": {}
+      },
+      "id": "efaa3e83-b46e-5973-8738-6ff3eb172564",
+      "name": "Pedir cobertura (14)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $('Atualizar fila e prever espera').item.json.atraso_acumulado_min }}",
+              "operation": "larger",
+              "value2": 20
+            }
+          ]
+        }
+      },
+      "id": "893547a5-a02e-5fea-b5e6-9aa1642908c3",
+      "name": "Atraso > 20 min?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL }}/webhook/daisy-agenda-reorganizar",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ correlation_id: $('Atualizar fila e prever espera').item.json.correlation_id, medico_id: $('Atualizar fila e prever espera').item.json.medico_id, atraso_min: $('Atualizar fila e prever espera').item.json.atraso_acumulado_min }) }}",
+        "options": {}
+      },
+      "id": "b5dd9911-a0de-53ed-8a37-c303ea71e9e7",
+      "name": "Reorganizar agenda (11)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO audit.evento_integracao (correlation_id, workflow, evento, payload) VALUES ($1,$2,$3,$4::jsonb)",
+        "options": {
+          "queryReplacement": "={{ [$('Atualizar fila e prever espera').item.json.correlation_id, '13_fila_digital', $('Atualizar fila e prever espera').item.json.fim ? 'consulta_finalizada' : 'fila_' + $('Atualizar fila e prever espera').item.json.tipo, JSON.stringify({ medico_id: $('Atualizar fila e prever espera').item.json.medico_id, na_fila: $('Atualizar fila e prever espera').item.json.na_fila, tempo_tipico_min: $('Atualizar fila e prever espera').item.json.tempo_tipico_min, duracao_min: $('Atualizar fila e prever espera').item.json.duracao_min, atraso_acumulado_min: $('Atualizar fila e prever espera').item.json.atraso_acumulado_min, avisos: ($('Atualizar fila e prever espera').item.json.avisos || []).length })] }}"
+        }
+      },
+      "id": "623c097e-eb8e-5d85-ba63-033ba6c21aa3",
+      "name": "Gravar evento",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1440,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Espera prevista = restante da consulta atual + (posição − 1) × tempo típico + atraso de chegada do médico (12). Tempo típico = mediana das últimas 20 consultas do médico (mín. 5); senão, SLA da especialidade. A Daisy avisa no check-in, quando o paciente vira o próximo e quando a previsão muda mais de 10 min. Fila no Redis; só os eventos vão ao PostgreSQL.",
+        "height": 190,
+        "width": 440
+      },
+      "id": "cb75e8fa-4c4f-58b3-9062-944e841886e7",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -260
+      ]
+    }
+  ],
+  "connections": {
+    "Evento de atendimento": {
+      "main": [
+        [
+          {
+            "node": "Normalizar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ETA do médico (12)": {
+      "main": [
+        [
+          {
+            "node": "Normalizar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar evento": {
+      "main": [
+        [
+          {
+            "node": "Fila do médico (Redis)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fila do médico (Redis)": {
+      "main": [
+        [
+          {
+            "node": "Mediana das últimas 20 consultas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mediana das últimas 20 consultas": {
+      "main": [
+        [
+          {
+            "node": "Atualizar fila e prever espera",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar fila e prever espera": {
+      "main": [
+        [
+          {
+            "node": "Salvar fila (Redis, TTL 16 h)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar fila (Redis, TTL 16 h)": {
+      "main": [
+        [
+          {
+            "node": "Separar avisos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fim da consulta?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Atraso > 30 min?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gravar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar avisos": {
+      "main": [
+        [
+          {
+            "node": "Daisy avisa o paciente (10)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fim da consulta?": {
+      "main": [
+        [
+          {
+            "node": "Disparar NPS (05A)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Atraso > 30 min?": {
+      "main": [
+        [
+          {
+            "node": "Pedir cobertura (14)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Atraso > 20 min?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atraso > 20 min?": {
+      "main": [
+        [
+          {
+            "node": "Reorganizar agenda (11)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "DaisyCare"
+    },
+    {
+      "name": "modelo-ouro"
+    }
+  ],
+  "meta": {
+    "descricao": "Mantém a fila de cada médico no Redis, prevê a espera pela mediana das últimas consultas e pelo atraso de chegada (12), avisa o paciente pela Daisy e dispara NPS, reorganização ou cobertura.",
+    "aviso": "Simulação. Vincule as credenciais (PostgreSQL, Redis) e defina as variáveis indicadas antes de ativar. Sem CPF nem dados clínicos."
+  }
+}

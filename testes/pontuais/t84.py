@@ -1,6 +1,6 @@
 import threading,http.server,socketserver,functools,json,sys
 from playwright.sync_api import sync_playwright
-d='/tmp/claude-0/-home-claude/170423f3-6c13-538a-b17c-4f6e0b4bef5c/scratchpad/pk/DaisyCare'
+import os;d=os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..','app'))
 NAME=sys.argv[1]
 class Q(http.server.SimpleHTTPRequestHandler):
     def log_message(s,*a):pass
@@ -31,27 +31,11 @@ with sync_playwright() as p:
             q.evaluate("(i)=>document.querySelectorAll('#appchat .chat-side-panel button')[i].click()",v)
         q.wait_for_timeout(1800)
         return {'in':str(v),'kind':kind,'txt':last(),'ev':q.evaluate("window.__ev"),'ovl':q.evaluate("window.__ovl")}
-
-    def say(m):
-        q.fill('#appInput',m);q.evaluate("sendChat('app')");q.wait_for_timeout(500)
-        return q.evaluate("(()=>{const b=[...document.querySelectorAll('#appBody .bubble-row:not(.user) .bubble')];return b[b.length-1].innerText})()")
-    def run(title,*cmds):
-        q.evaluate("showPage('appchat')");q.wait_for_timeout(200)
-        r=None
-        for c in cmds:r=say(c)
-        print('###',title,'|',' > '.join(cmds));print(r[:600].replace(chr(10),' / '));print()
-    run('bug','menu','7','quero','2','e se eu quiser ir para cafeteria','pode me passar a rota interna para cafeteria')
-    run('bug2','menu','7','quero','1','rota interna')
-    run('f11','menu','7','quero','1','3')
-    run('f12','menu','onde fica a brinquedoteca')
-    run('f13','menu','7','quero','1','quero ir ate a recepcao','5')
-    run('f1','menu','como chego na recepcao')
-    run('f2','menu','onde fica o banheiro')
-    run('f3','menu','quanto tempo falta')
-    run('f4','menu','11')
-    run('f5','menu','estou com fome')
-    run('f6','menu','preparo para colonoscopia')
-    run('f7','menu','posso tomar agua antes do exame de sangue')
-    run('f8','menu','dor no peito')
-    run('f9','menu','ajuda')
-    run('f10','menu','7','quero','1','3','1')
+    out=[]
+    def go(*cmds):
+        q.evaluate("showPage('appchat')");q.wait_for_timeout(300)
+        for m in cmds[:-1]:
+            q.fill('#appInput',m);q.evaluate("sendChat('app')");q.wait_for_timeout(400)
+        r=act('say',cmds[-1]);r['in']=' > '.join(cmds);out.append(r)
+    go('menu'); go('menu','7','quero','1','2'); go('ajuda')
+    for o in out:print(o['in'],'|',o['txt'].replace(chr(10),' / ')[:700],'|',o['ev'],o['ovl'])

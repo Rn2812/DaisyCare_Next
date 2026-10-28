@@ -1,6 +1,6 @@
 import threading,http.server,socketserver,functools,json,sys
 from playwright.sync_api import sync_playwright
-d='/tmp/claude-0/-home-claude/170423f3-6c13-538a-b17c-4f6e0b4bef5c/scratchpad/pk/DaisyCare'
+import os;d=os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..','app'))
 NAME=sys.argv[1]
 class Q(http.server.SimpleHTTPRequestHandler):
     def log_message(s,*a):pass
@@ -37,5 +37,5 @@ with sync_playwright() as p:
         for m in cmds[:-1]:
             q.fill('#appInput',m);q.evaluate("sendChat('app')");q.wait_for_timeout(400)
         r=act('say',cmds[-1]);r['in']=' > '.join(cmds);out.append(r)
-    go('menu'); go('menu','7','quero','1','2'); go('ajuda')
+    go('menu','7','quero','1','1'); go('menu','7','quero','1','2'); go('menu','7','quero','1','3'); go('menu','7','quero','1','4'); go('menu','7','quero','1','2','5')
     for o in out:print(o['in'],'|',o['txt'].replace(chr(10),' / ')[:700],'|',o['ev'],o['ovl'])

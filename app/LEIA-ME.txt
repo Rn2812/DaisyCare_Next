@@ -7,10 +7,11 @@ DAISYCARE - COMO ABRIR
 4. Para encerrar, feche a janela preta do servidor.
 
 Conteudo da pasta (mantenha tudo junto):
-  DaisyCare_App_v40_91_Voz_Natural.html
+  DaisyCare_App_v40_93_Voz_Natural.html
   falas\            gravacoes da Daisy (.mp3); falas\auto = respostas completas
   Iniciar_DaisyCare.bat
   servidor_daisycare.ps1
+  n8n\              JSON de importacao dos workflows 12 a 17 (n8n)
 
 Observacoes
 - Voz: por padrao a Daisy fala a resposta inteira (datas, horarios, especialidades) por arquivos
@@ -21,3 +22,21 @@ Observacoes
 - Para trocar uma fala, substitua o arquivo em falas\ mantendo o mesmo nome.
 - Se a porta 8765 estiver em uso: powershell -File servidor_daisycare.ps1 -Port 8766
 - Dados ficticios; nenhuma conversa ou CPF e gravado.
+
+Versao 40.92 (pagina Workflows)
+- Fluxo em execucao refeito: inclui 12 (trajeto do medico, Google Routes com intervalo adaptativo),
+  13 (fila digital com espera prevista e avisos), 14, 15, 16 e o novo 17 (Daisy conversa, OpenAI),
+  alem da camada de dados: Redis (tempo real), PostgreSQL (eventos e BI) e CRM do cliente (status em lote).
+- Especificacao dos workflows 12 a 17 com download dos JSON do n8n (tambem na pasta n8n).
+- Regras RN-31 a RN-34 e pagina Arquitetura e dados atualizadas.
+- Para ativar no n8n: credenciais PostgreSQL e Redis; variaveis N8N_BASE_URL, GOOGLE_MAPS_API_KEY,
+  OPENAI_API_KEY e OPENAI_MODEL.
+
+Versao 40.93 (chat e WhatsApp)
+- Opcao 1 (Confirmar consulta) agora mostra a consulta e oferece: 1 confirmar presenca, 2 cancelar, 3 reagendar.
+- Cancelamento de consultas, exames e procedimentos: digite CANCELAR ou, por exemplo, "cancelar a endoscopia".
+  A Daisy pede confirmacao, gera protocolo e libera o horario para a fila de espera.
+- Reagendamento: digite REAGENDAR ou REMARCAR. A Daisy mostra os novos dias e horarios disponiveis
+  e pede uma confirmacao final (horario atual x novo) antes de alterar a agenda.
+- Essas respostas sao so em texto (sem audio gravado).
+- Regras RN-35 e RN-36 na pagina Regras de negocios.

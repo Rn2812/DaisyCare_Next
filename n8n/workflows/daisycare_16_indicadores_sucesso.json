@@ -125,7 +125,7 @@
     },
     {
       "parameters": {
-        "content": "Receita recuperada é uma ESTIMATIVA (remarcados + encaixes × ticket médio). Metas de 40% e 50% são sugestões do MVP.",
+        "content": "Receita recuperada é uma ESTIMATIVA (remarcados + encaixes × ticket médio). Metas de 40% e 50% são sugestões do sistema.",
         "height": 140,
         "width": 360
       },
@@ -215,6 +215,6 @@
   ],
   "meta": {
     "descricao": "Consolida reversão de faltas, reversão de vagas e receita recuperada (estimativa) e envia ao Power BI com alerta quando abaixo da meta.",
-    "aviso": "Simulação do MVP. Vincule suas credenciais (PostgreSQL) e defina a variável N8N_BASE_URL. Sem CPF nem dados clínicos."
+    "aviso": "Simulação. Vincule suas credenciais (PostgreSQL) e defina a variável N8N_BASE_URL. Sem CPF nem dados clínicos."
   }
 }
