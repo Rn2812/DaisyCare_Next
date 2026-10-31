@@ -7,14 +7,16 @@ Etapas:
      e reagendar pelo chat e WhatsApp, regras RN-35 e RN-36).
      - patch93_trechos.json: trechos alterados, cada um conferido antes de ser trocado.
      - v93_agenda.js: módulo novo de agenda (cancelar e reagendar).
-  3. Grava app/DaisyCare_App_v40_93_Voz_Natural.html e confere o SHA-256 com a versão publicada.
+  3. Insere o relógio de demonstração (relogio_demo.js) logo após <head>: a demo começa
+     em 26/10/2026 às 18h35, coerente com as falas gravadas, em qualquer dia de acesso.
+  4. Grava app/DaisyCare_App_v40_93_Voz_Natural.html e confere o SHA-256 com a versão publicada.
 
 Uso: python3 fonte/build/build_v93.py
 """
 import hashlib, json, os, runpy, sys
 
 W = os.path.dirname(os.path.abspath(__file__))
-SHA_ESPERADO = 'dd6f75bdf309d032ff37a3278c85d86f63bf8285401fba63d2f31e78ad7a3134'
+SHA_ESPERADO = '1e462f84a8a34f7d61729d981738b69a35c7b69b5b126fe61fe728e9bf952eab'
 
 runpy.run_path(os.path.join(W, 'build.py'), run_name='__main__')
 base = open(os.path.join(W, 'saida', 'DaisyCare_App_v40_91_Voz_Natural.html'), encoding='utf-8').read().split('\n')
@@ -31,6 +33,11 @@ for t in sorted(trechos, key=lambda t: t['linha'], reverse=True):
     base[i:i + len(t['antes'])] = novo
 
 html = '\n'.join(base)
+
+relogio = open(os.path.join(W, 'relogio_demo.js'), encoding='utf-8').read().rstrip('\n')
+if html.count('<head>\n') < 1:
+    sys.exit('Marcador <head> não encontrado para inserir o relógio de demonstração.')
+html = html.replace('<head>\n', '<head>\n<script>\n' + relogio + '\n</script>\n', 1)
 destino = os.path.join(W, '..', '..', 'app', 'DaisyCare_App_v40_93_Voz_Natural.html')
 open(destino, 'w', encoding='utf-8').write(html)
 sha = hashlib.sha256(html.encode('utf-8')).hexdigest()

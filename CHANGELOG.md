@@ -3,6 +3,11 @@
 ## FIAP NEXT 2026
 - 🥇 Medalha de ouro: melhor solução entre os 10 projetos da turma de Data Science.
 
+## v40.93 · ajustes de 30/10/2026
+- Relógio de demonstração: a demo começa em 26/10/2026 às 18h35, coerente com as falas gravadas, em qualquer dia de acesso. `?relogio=real` usa o relógio do sistema. O build insere o módulo `fonte/build/relogio_demo.js` e confere o novo SHA-256.
+- Suíte nova `testes/t93_relogio.py` (6 checagens). Total: 130 checagens.
+- README e `analytics/README.md`: alvo do modelo definido (consulta realizada), resultado por decil no lugar do F1, bases de modelagem e operacional separadas, situação real dos 16 workflows n8n.
+
 ## v40.93 · chat e WhatsApp
 - Opção 1 (Confirmar consulta) mostra a consulta e oferece: 1 confirmar presença, 2 cancelar, 3 reagendar.
 - Cancelamento de consultas, exames e procedimentos: `CANCELAR` ou frases como "cancelar a endoscopia". A Daisy pede confirmação, gera protocolo `DC-CAN` e libera o horário para a fila de espera.

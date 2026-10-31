@@ -16,7 +16,7 @@ Projeto do Challenge FIAP × Hospital Mater Dei (Data Science, 2026), premiado n
 
 ## O problema em números
 
-Base sintética de **200 mil agendamentos em 10 hospitais** (set/2025 a ago/2026):
+Base operacional sintética de **200 mil agendamentos em 10 hospitais** (set/2025 a ago/2026), a mesma do Power BI e da apresentação:
 
 | Indicador | Valor |
 |---|---|
@@ -32,17 +32,17 @@ Base sintética de **200 mil agendamentos em 10 hospitais** (set/2025 a ago/2026
 |---|---|
 | **Atendimento (app e WhatsApp)** | Chat por texto e voz com 11 opções: confirmar, cancelar e reagendar (v40.93), fila digital, agenda familiar, Pix/boleto, preparo de exames, NPS e transbordo humano |
 | **Smart Queue** | Vaga cancelada vira convite para o próximo paciente elegível da lista de espera |
-| **Automação (n8n)** | 16 workflows ligados por eventos: confirmação, encaixe, trajeto do médico (Google Routes), fila digital, cobertura de agenda, indicadores e conversa com IA |
+| **Automação (n8n)** | 16 workflows ligados por eventos. Os 10 primeiros (01 a 11: CRM, confirmação, Smart Queue, Pix/boleto, NPS, reconciliação, WhatsApp, agente IA e agenda) foram montados e testados em n8n local com Docker e PostgreSQL. Os 6 novos (12 a 17: trajeto do médico com Google Routes, fila digital, cobertura de agenda, lista de espera, indicadores e conversa com IA) estão estruturados e ainda não rodaram |
 | **Dados e BI** | Eventos com `correlation_id` no PostgreSQL, tempo real no Redis, painel executivo com medidas DAX |
-| **Machine Learning** | Modelo de previsão de comparecimento (AUC 0,70, F1 0,70) para priorizar quem recebe contato extra |
+| **Machine Learning** | Modelo que estima a chance de o agendamento virar consulta realizada (Regressão Logística, AUC 0,70). Nos 10% de menor chance, 67% não viram consulta, quase o dobro da média (36%): é a lista para contato extra e para preparar o encaixe |
 | **Governança e LGPD** | 36 regras de negócio documentadas, CPF e e-mail mascarados, sem decisão clínica, trilha de auditoria |
 
 ## Competências demonstradas
 
 - **Análise de dados e BI:** modelagem de indicadores (no-show, reversão de faltas, reversão de vagas, receita recuperada), DAX, painel executivo com exceções por meta.
-- **Machine Learning:** EDA, tratamento de outliers (IQR), pipeline scikit-learn, comparação de 3 algoritmos com validação cruzada, tuning, análise de threshold e de desempenho por segmento.
+- **Machine Learning:** EDA, tratamento de outliers (IQR), pipeline scikit-learn sem vazamento, comparação de 3 algoritmos com validação cruzada, tuning, análise de threshold, decis de risco e desempenho por segmento.
 - **Engenharia e automação:** fluxos n8n orientados a eventos, PostgreSQL, Redis, Docker, integração com APIs (Google Routes, OpenAI).
-- **Qualidade:** 124 checagens automatizadas com Playwright e build reproduzível com conferência de SHA-256.
+- **Qualidade:** 130 checagens automatizadas com Playwright e build reproduzível com conferência de SHA-256.
 - **Produto:** regras de negócio, jornada do paciente, acessibilidade (zoom, alto contraste, voz) e pitch executivo.
 
 ## Como rodar
@@ -61,12 +61,15 @@ python3 -m http.server 8765
 
 Clique em **"Ativar voz oficial Daisy"** uma vez para liberar o som. Para testar a novidade da v40.93, digite no chat `1`, `cancelar a endoscopia` ou `reagendar`.
 
+A demo usa um **relógio de demonstração**: ela sempre começa em 26/10/2026 às 18h35, cerca de 2h25 antes da consulta de cardiologia da paciente de teste, porque as falas gravadas citam essas datas. Para usar o relógio real, acrescente `?relogio=real` ao endereço.
+
 ## Testes
 
 ```bash
 pip install playwright && playwright install chromium
 python3 testes/regressao.py   app/DaisyCare_App_v40_93_Voz_Natural.html   # 105 checagens
 python3 testes/t93_agenda.py  app/DaisyCare_App_v40_93_Voz_Natural.html   # 19 checagens (confirmar, cancelar, reagendar)
+python3 testes/t93_relogio.py app/DaisyCare_App_v40_93_Voz_Natural.html   # 6 checagens (relógio de demonstração)
 ```
 
 ## Build a partir do código-fonte
@@ -75,7 +78,7 @@ python3 testes/t93_agenda.py  app/DaisyCare_App_v40_93_Voz_Natural.html   # 19 c
 python3 fonte/build/build_v93.py
 ```
 
-O script monta a v40.91 a partir da base e dos módulos `v*.js`, aplica as mudanças das versões 40.92 e 40.93 e confere o SHA-256 do arquivo gerado com a versão publicada.
+O script monta a v40.91 a partir da base e dos módulos `v*.js`, aplica as mudanças das versões 40.92 e 40.93, insere o relógio de demonstração (`fonte/build/relogio_demo.js`) e confere o SHA-256 do arquivo gerado com a versão publicada.
 
 ## Estrutura
 
@@ -83,7 +86,7 @@ O script monta a v40.91 a partir da base e dos módulos `v*.js`, aplica as mudan
 app/            aplicativo pronto (HTML único + falas mp3 + servidor local)
 fonte/          código-fonte do build (base, módulos JS, patches)
 testes/         suítes Playwright (testes/historico: scripts das versões 80 a 91)
-n8n/            workflows 12 a 17 para importar no n8n
+n8n/            workflows 12 a 17 para importar no n8n (os 01 a 11 estão descritos no manual em docs/n8n)
 analytics/      notebook de Machine Learning, bases sintéticas e medidas DAX
 docs/           apresentação interativa, pitch em PDF, manual dos workflows n8n, telas e roteiros de voz
 ```
@@ -93,7 +96,7 @@ docs/           apresentação interativa, pitch em PDF, manual dos workflows n8
 | Jornada do paciente | WhatsApp: cancelamento com protocolo |
 |---|---|
 | ![](docs/imagens/01_inicio.png) | ![](docs/imagens/03_whatsapp_cancelar.png) |
-| **Workflows n8n em execução** | **Indicadores operacionais** |
+| **Mapa dos 16 workflows n8n (animação no app)** | **Indicadores operacionais** |
 | ![](docs/imagens/04_workflows_n8n.png) | ![](docs/imagens/05_indicadores_bi.png) |
 | **Smart Queue** | **Acompanhamento médico** |
 | ![](docs/imagens/06_smart_queue.png) | ![](docs/imagens/07_monitor_medico.png) |
@@ -112,9 +115,10 @@ Rodrigo Nillo (desenvolvimento da solução) e a equipe Data Bridge no FIAP NEXT
 
 ## Limitações e próximos passos
 
-- As datas da paciente de teste são fixas (consulta de cardiologia em 26/10/2026) porque as falas gravadas citam essas datas. Depois dessa data, a contagem regressiva da tela inicial fica zerada.
+- As datas da paciente de teste são fixas (consulta de cardiologia em 26/10/2026) porque as falas gravadas citam essas datas. O relógio de demonstração mantém a cena coerente em qualquer dia de acesso.
 - Respostas de cancelar e reagendar ainda não têm áudio gravado (só texto).
-- Os workflows 12 a 17 seguem a estrutura do n8n, mas ainda não rodaram em uma instância real.
+- Os workflows 12 a 17 seguem a estrutura do n8n, mas ainda não rodaram em uma instância real. A automação local (01 a 11) está desativada no momento.
+- O modelo de ML foi treinado em uma base sintética de modelagem separada (200 mil agendamentos, 18% de no-show), diferente da base operacional dos indicadores (8,7%).
 - O destino do mapa é um ponto de exemplo, porque a unidade Mater Dei Paulista ainda não existe.
 
 Histórico de versões: [CHANGELOG.md](CHANGELOG.md)

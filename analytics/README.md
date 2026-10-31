@@ -1,8 +1,17 @@
 # DaisyCare · Camada de análise
 
-Dados sintéticos de 200 mil agendamentos usados no modelo de Machine Learning e no painel Power BI do DaisyCare. Não há dado pessoal: pacientes, unidades e eventos são gerados para estudo.
+Dados sintéticos para o modelo de Machine Learning e medidas DAX do painel Power BI do DaisyCare. Não há dado pessoal: pacientes, unidades e eventos são gerados para estudo.
+
+São duas bases diferentes, cada uma com 200 mil agendamentos:
+
+| Base | Uso | Perfil |
+|---|---|---|
+| Base de modelagem (`ml/*.parquet`) | Notebook de ML | 64% realizados, 18,2% no-show, 13,2% cancelados, 4,6% remarcados |
+| Base operacional de 12 meses | Power BI, README e apresentação | 8,7% de no-show, 10 hospitais, set/2025 a ago/2026 |
 
 ## Machine Learning: previsão de comparecimento
+
+**Alvo:** `target_conversao` = 1 quando o agendamento vira consulta realizada (64% da base) e 0 quando termina em falta, cancelamento ou remarcação (36%).
 
 Notebook: [ml/DaisyCare_ML_previsao_comparecimento.ipynb](ml/DaisyCare_ML_previsao_comparecimento.ipynb)
 
@@ -15,9 +24,15 @@ Notebook: [ml/DaisyCare_ML_previsao_comparecimento.ipynb](ml/DaisyCare_ML_previs
 | Pré-processamento | Imputação, winsorização por IQR, one-hot e normalização em pipeline scikit-learn |
 | Modelos | Regressão Logística, Random Forest e XGBoost com validação cruzada |
 | Tuning | Busca de hiperparâmetros na Regressão Logística (melhor: L1, C = 0,1) |
-| Avaliação | AUC ≈ 0,70 e F1 ≈ 0,70 no teste, tabela de threshold e desempenho por canal e especialidade |
+| Avaliação | AUC ≈ 0,70 no teste, decis de risco, tabela de threshold e desempenho por canal e especialidade |
 
 **Escolha do modelo:** a Regressão Logística empatou em AUC com os modelos de árvore (0,699 contra 0,693 e 0,691) e teve a menor distância entre treino e validação. O Random Forest chegou a 0,92 de AUC no treino, sinal de overfitting. Além disso, os coeficientes são fáceis de explicar para a operação.
+
+**Resultado por decil:** nos 10% de agendamentos com menor probabilidade, só 33% viram consulta (67% não convertem, contra 36% na média). Nos 10% de maior probabilidade, 91,5% se realizam. A Daisy concentra lembretes extras e a preparação do encaixe na ponta de baixo.
+
+**Sobre o F1:** com 64% de positivos, um modelo que prevê "realiza" para todos já teria F1 perto de 0,78. Por isso o F1 de 0,70 no threshold 0,5 não é a melhor medida de valor; AUC e decis mostram melhor a capacidade de ordenar o risco.
+
+**Janelas T-24h, T-4h e T-2h:** as três deram o mesmo AUC (0,7065). Retirar `confirmou_4h` e `confirmou_2h` não mudou o resultado; vale conferir se essas colunas chegam de fato à matriz de treino antes de usar a comparação como argumento.
 
 **Uso na operação:** o threshold é uma decisão de negócio. Com 0,35 o modelo encontra 87% dos casos de risco, com mais falsos positivos (mais lembretes). Com 0,60 a precisão sobe para 82%, mas o recall cai para 45%.
 
