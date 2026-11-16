@@ -109,7 +109,11 @@ Apresentações:
 
 O DaisyCare recebeu a **medalha de ouro no FIAP NEXT 2026**, como a melhor solução entre os 10 projetos da turma de Data Science.
 
-<img src="docs/imagens/premiacao_fiap_next_2026.jpg" alt="Rodrigo Nillo e a equipe Data Bridge com os shapes da premiação no FIAP NEXT 2026" width="420">
+<img src="docs/imagens/premiacao_podio_fiap_next_2026.jpg" alt="Equipe Data Bridge no pódio do FIAP NEXT 2026, com os shapes e o prêmio de 5 mil reais" width="760">
+
+| | |
+|---|---|
+| <img src="docs/imagens/premiacao_fiap_next_2026.jpg" alt="Rodrigo Nillo e a equipe Data Bridge com os shapes da premiação no FIAP NEXT 2026" width="360"> | <img src="docs/imagens/agradecimento_fiap_next_2026.jpg" alt="Card de agradecimento aos professores e à FIAP, com a Daisy e a equipe" width="420"> |
 
 Rodrigo Nillo (desenvolvimento da solução) e a equipe Data Bridge no FIAP NEXT 2026.
 

@@ -2,6 +2,7 @@
 
 ## FIAP NEXT 2026
 - 🥇 Medalha de ouro: melhor solução entre os 10 projetos da turma de Data Science.
+- README: fotos da premiação atualizadas (pódio, equipe com os shapes e card de agradecimento).
 
 ## v40.93 · ajustes de 30/10/2026
 - Relógio de demonstração: a demo começa em 26/10/2026 às 18h35, coerente com as falas gravadas, em qualquer dia de acesso. `?relogio=real` usa o relógio do sistema. O build insere o módulo `fonte/build/relogio_demo.js` e confere o novo SHA-256.
